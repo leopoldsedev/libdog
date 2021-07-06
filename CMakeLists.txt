@@ -1,0 +1,19 @@
+cmake_minimum_required(VERSION 3.10)
+
+set(PROJECT_NAME libdog)
+project(${PROJECT_NAME} VERSION 0.1)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
+add_compile_options("-Wall")
+add_compile_options("-Wextra")
+
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+
+set(SRC_EXT_PATTERN ".cpp")
+file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*${SRC_EXT_PATTERN})
+
+add_executable(${PROJECT_NAME} ${SRC_FILES})
