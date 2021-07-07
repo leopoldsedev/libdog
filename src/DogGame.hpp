@@ -1,6 +1,11 @@
 #include <iostream>
 #include <array>
 
+#include "Deck.hpp"
+
+#define PLAYER_COUNT (4)
+#define MAX_CARDS_HAND (6)
+
 
 class DogGame {
 	// 1 = path, 2 = finish, 3 = kennel, 4 = char
@@ -56,22 +61,20 @@ class DogGame {
 	};
 
 	std::array<int, 64> path;
-	std::array<std::array<bool, 4>, 4> finishes;
-	std::array<std::array<bool, 4>, 4> kennels;
+	std::array<std::array<bool, 4>, PLAYER_COUNT> finishes;
+	std::array<std::array<bool, 4>, PLAYER_COUNT> kennels;
+
+	std::array<std::array<Card, MAX_CARDS_HAND>, PLAYER_COUNT> hands;
 
 	int player_id_next_turn;
+	int next_hand_size;
+
+	Deck deck;
 
 	public:
 		DogGame() {
-			this->reset();
-
-			path[18] = 0;
-			path[4] = 1;
-			path[50] = 2;
-			path[40] = 3;
-
-			finishes[1][3] = true;
-			kennels[1][3] = true;
+			reset();
+			deck = Deck();
 		}
 
 		void reset() {
@@ -84,6 +87,9 @@ class DogGame {
 			for (std::size_t i = 0; i != kennels.size(); i++) {
 				kennels[i].fill(true);
 			}
+
+			player_id_next_turn = 0;
+			next_hand_size = 6;
 		}
 
 //        bool play_card(Card card) {
@@ -94,8 +100,6 @@ class DogGame {
 
 		void print_state() {
 			for (std::size_t row = 0; row != vis_map_spec.size(); row++) {
-
-
 				for (std::size_t col = 0; col != vis_map_spec[0].size(); col++) {
 					int spec = vis_map_spec[row][col];
 					int val = vis_map_val[row][col];
@@ -149,7 +153,6 @@ class DogGame {
 							break;
 						}
 					}
-
 				}
 				std::cout << std::endl;
 			}
