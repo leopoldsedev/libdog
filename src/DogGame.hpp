@@ -205,7 +205,7 @@ class DogGame {
 		void place_at_kennel(int player) {
 			auto& kennel = kennels[player];
 
-			for (int i = 0; i < kennel.size(); i++) {
+			for (std::size_t i = 0; i < kennel.size(); i++) {
 				if (kennel[i] == false) {
 					kennel[i] = true;
 					return;
@@ -277,7 +277,7 @@ class DogGame {
 		}
 
 		void print_hands() {
-			for (int i = 0; i < hands.size(); i++) {
+			for (std::size_t i = 0; i < hands.size(); i++) {
 				std::cout << i << ": ";
 				for (auto& card : hands[i]) {
 					std::cout << Deck::card_to_str(card);
