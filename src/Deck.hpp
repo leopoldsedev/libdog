@@ -36,15 +36,20 @@ class Deck {
 
 		void reset() {
 			cards = drawn;
-			drawn = {};
+
+			while (drawn.size() > 0) {
+				Card card = drawn.back();
+				drawn.pop_back();
+				cards.insert(cards.begin(), card);
+			}
 		}
 
 		void shuffle() {
 			std::random_shuffle(cards.begin(), cards.end());
 		}
 
-		std::string card_to_str(Card card) {
-			std::string map[] = { "A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "J" };
+		static std::string card_to_str(Card card) {
+			std::string map[] = { "-", "A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "J" };
 			return map[card];
 		}
 
