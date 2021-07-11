@@ -308,7 +308,7 @@ class DogGame {
 			}
 		}
 
-		bool swap_pieces(int player, int path_idx_player, int path_idx_other) {
+		bool swap_pieces(int player, int path_idx_player, int path_idx_other, bool legal_check) {
 			PiecePtr& piece_player = path.at(path_idx_player);
 			PiecePtr& piece_other = path.at(path_idx_other);
 
@@ -328,9 +328,11 @@ class DogGame {
 				return false;
 			}
 
-			PiecePtr temp = std::move(piece_other);
-			piece_other = std::move(piece_player);
-			piece_player = std::move(temp);
+			if (!legal_check) {
+				PiecePtr temp = std::move(piece_other);
+				piece_other = std::move(piece_player);
+				piece_player = std::move(temp);
+			}
 
 			return true;
 		}
