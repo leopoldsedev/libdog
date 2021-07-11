@@ -11,15 +11,15 @@ using namespace std;
 
 int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *argv[])
 {
-    DogGame game;
+	DogGame game;
 
-	game.print_state();
+	std::cout << game << std::endl;
 
 	game.start(0);
 	game.start(1);
 	game.start(2);
 	game.start(3);
-	game.print_state();
+	std::cout << game << std::endl;
 
 	int i = 0;
 	bool legal = true;
@@ -30,7 +30,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 			break;
 		}
 		i++;
-		game.print_state();
+		std::cout << game << std::endl;
 
 		sleep(100);
 	}

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <array>
 #include <memory>
 
@@ -297,8 +298,13 @@ class DogGame {
 			return true;
 		}
 
-		// TODO Let this only build a string instead of printing it
-		void print_state() {
+		friend std::ostream& operator<<(std::ostream& os, DogGame const& obj) {
+			  return os << obj.to_str();
+		}
+
+		std::string to_str() const {
+			std::stringstream ss;
+
 			for (std::size_t row = 0; row != vis_map_spec.size(); row++) {
 				for (std::size_t col = 0; col != vis_map_spec[0].size(); col++) {
 					int spec = vis_map_spec[row][col];
@@ -306,12 +312,12 @@ class DogGame {
 
 					switch (spec) {
 						case 1: {
-							PiecePtr& piece = path.at(val);
+							const PiecePtr& piece = path.at(val);
 
 							if (piece == nullptr) {
-								std::cout << 'o';
+								ss << 'o';
 							} else {
-								std::cout << piece->player;
+								ss << piece->player;
 							}
 
 							break;
@@ -323,9 +329,9 @@ class DogGame {
 							bool occupied = (finishes.at(player).at(finish_idx) != nullptr);
 
 							if (occupied) {
-								std::cout << player;
+								ss << player;
 							} else {
-								std::cout << 'o';
+								ss << 'o';
 							}
 
 							break;
@@ -337,36 +343,42 @@ class DogGame {
 							bool occupied = (kennels.at(player).at(finish_idx) != nullptr);
 
 							if (occupied) {
-								std::cout << player;
+								ss << player;
 							} else {
-								std::cout << 'o';
+								ss << 'o';
 							}
 
 							break;
 						}
 						case 4: {
-							std::cout << ((char) (val));
+							ss << ((char) (val));
 							break;
 						}
 						default: {
-							std::cout << ' ';
+							ss << ' ';
 							break;
 						}
 					}
 				}
-				std::cout << std::endl;
+				ss << std::endl;
 			}
 
-			print_hands();
+			std::string hands_str = get_hands_str();
+			ss << hands_str;
+			return ss.str();
 		}
 
-		void print_hands() {
+		std::string get_hands_str() const {
+			std::stringstream ss;
+
 			for (std::size_t i = 0; i < hands.size(); i++) {
-				std::cout << i << ": ";
+				ss << i << ": ";
 				for (auto& card : hands[i]) {
-					std::cout << Deck::card_to_str(card);
+					ss << Deck::card_to_str(card);
 				}
-				std::cout << std::endl;
+				ss << std::endl;
 			}
+
+			return ss.str();
 		}
 };
