@@ -96,7 +96,7 @@ class DogGame {
 			}
 
 			for (std::size_t i = 0; i != hands.size(); i++) {
-				hands[i].fill(None);
+				hands.at(i).fill(None);
 			}
 
 			player_next_turn = 0;
@@ -112,7 +112,7 @@ class DogGame {
 		bool start(int player) {
 			bool legal = false;
 
-			auto& kennel = kennels[player];
+			auto& kennel = kennels.at(player);
 
 			for (std::size_t i = 0; i < kennel.size(); i++) {
 				PiecePtr& piece = kennel.at(i);
@@ -343,9 +343,9 @@ class DogGame {
 			std::stringstream ss;
 
 			for (std::size_t row = 0; row != vis_map_spec.size(); row++) {
-				for (std::size_t col = 0; col != vis_map_spec[0].size(); col++) {
-					int spec = vis_map_spec[row][col];
-					int val = vis_map_val[row][col];
+				for (std::size_t col = 0; col != vis_map_spec.at(0).size(); col++) {
+					int spec = vis_map_spec.at(row).at(col);
+					int val = vis_map_val.at(row).at(col);
 
 					switch (spec) {
 						case 1: {
@@ -410,7 +410,7 @@ class DogGame {
 
 			for (std::size_t i = 0; i < hands.size(); i++) {
 				ss << i << ": ";
-				for (auto& card : hands[i]) {
+				for (auto& card : hands.at(i)) {
 					ss << Deck::card_to_str(card);
 				}
 				ss << std::endl;
