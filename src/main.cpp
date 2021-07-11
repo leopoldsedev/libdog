@@ -9,7 +9,7 @@
 
 using namespace std;
 
-int main(int argc, const char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *argv[])
 {
     DogGame game;
 
@@ -22,8 +22,13 @@ int main(int argc, const char *argv[])
 	game.print_state();
 
 	int i = 0;
+	bool legal = true;
 	while (1) {
-		game.push_forward(0, i % 64, 1, false, false);
+		legal = game.move_piece(0, i % 64, 1, i != 0, false);
+		if (!legal) {
+			std::cout << "illegal move" << std::endl;
+			break;
+		}
 		i++;
 		game.print_state();
 

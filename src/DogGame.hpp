@@ -1,17 +1,24 @@
 #include <iostream>
 #include <array>
+#include <memory>
 
 #include "Deck.hpp"
+#include "Piece.hpp"
 
 #define PLAYER_COUNT (4)
 #define MAX_CARDS_HAND (6)
 
 #define PATH_LENGTH (64)
 #define PATH_SECTION_LENGTH (PATH_LENGTH / PLAYER_COUNT)
+#define FINISH_LENGTH (4)
+#define KENNEL_SIZE (4)
+
+
+typedef std::unique_ptr<Piece> PiecePtr;
 
 
 class DogGame {
-	// 1 = path, 2 = finish, 3 = kennel, 4 = char
+	// 0 = nothing, 1 = path, 2 = finish, 3 = kennel, 4 = char
 	std::array<std::array<int, 41>, 21> vis_map_spec = {
 		{
 			{ 4, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 },
@@ -63,9 +70,9 @@ class DogGame {
 		}
 	};
 
-	std::array<int, PATH_LENGTH> path;
-	std::array<std::array<bool, 4>, PLAYER_COUNT> finishes;
-	std::array<std::array<bool, 4>, PLAYER_COUNT> kennels;
+	std::array<PiecePtr, PATH_LENGTH> path;
+	std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
+	std::array<std::array<PiecePtr, KENNEL_SIZE>, PLAYER_COUNT> kennels;
 
 	std::array<std::array<Card, MAX_CARDS_HAND>, PLAYER_COUNT> hands;
 
@@ -81,14 +88,10 @@ class DogGame {
 		}
 
 		void reset() {
-			path.fill(-1);
-
-			for (std::size_t i = 0; i != finishes.size(); i++) {
-				finishes[i].fill(false);
-			}
-
-			for (std::size_t i = 0; i != kennels.size(); i++) {
-				kennels[i].fill(true);
+			for (std::size_t player = 0; player != kennels.size(); player++) {
+				for (std::size_t j = 0; j != kennels.size(); j++) {
+					kennels.at(player).at(j) = PiecePtr(new Piece(player));
+				}
 			}
 
 			for (std::size_t i = 0; i != hands.size(); i++) {
@@ -110,21 +113,27 @@ class DogGame {
 
 			auto& kennel = kennels[player];
 
-			for (int i = kennel.size() - 1; i >= 0; i--) {
-				if (kennel[i] == true) {
-					legal = true;
+			for (std::size_t i = 0; i < kennel.size(); i++) {
+				PiecePtr& piece = kennel.at(i);
+
+				if (piece != nullptr) {
 					int start_path_idx = player * PATH_SECTION_LENGTH;
-					int start_value = path.at(start_path_idx);
-					if (start_value == player) {
+					PiecePtr& start = path.at(start_path_idx);
+
+					if (start != nullptr && start->blocking) {
 						legal = false;
 					} else {
-						path.at(start_path_idx) = player;
-						kennel[i] = false;
+						legal = true;
 
-						if (start_value != -1) {
+						if (start != nullptr) {
 							send_to_kennel(player, start_path_idx, start_path_idx);
 						}
+
+						piece->area = Path;
+						piece->position = start_path_idx;
+						start = std::move(piece);
 					}
+
 					break;
 				}
 			}
@@ -139,7 +148,9 @@ class DogGame {
 				int section_id = i % PLAYER_COUNT;
 				int possible_blockade_idx = section_id * PATH_SECTION_LENGTH;
 
-				if (path.at(possible_blockade_idx) != -1) {
+				PiecePtr& piece = path.at(possible_blockade_idx);
+
+				if (piece != nullptr && piece->blocking) {
 					return possible_blockade_idx;
 				}
 			}
@@ -147,43 +158,84 @@ class DogGame {
 			return -1;
 		}
 
-		bool push_forward(int player, int path_idx, int count, bool into_finish, bool legal_check) {
-			bool legal = true;
+		bool move_piece(int player, int path_idx, int count, bool into_finish, bool legal_check) {
+			PiecePtr& piece = path.at(path_idx);
 
-			if (path.at(path_idx) != player) {
+			if (piece == nullptr) {
 				return false;
 			}
 
-			int new_path_idx_nofinish = (path_idx + count) % PATH_LENGTH;
+			if (piece->player != player) {
+				return false;
+			}
+
+			int steps_on_path;
+
+			int start_path_idx = player * PATH_SECTION_LENGTH;
+			int steps_into_finish;
+			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes[player];
 
 			if (into_finish) {
-				// TODO Check finish possibility
-			} else {
-				// Check blocking marbles
+				int steps_to_start;
+				// TODO Handle case where count < 0
 
-				int block_idx = next_blockade(path_idx);
-
-				bool blocked = (block_idx != path_idx && new_path_idx_nofinish >= block_idx);
-				if (new_path_idx_nofinish < path_idx) {
-					blocked = (block_idx == 0);
+				if (start_path_idx < path_idx) {
+					steps_to_start = (start_path_idx + PATH_LENGTH) - path_idx;
+				} else {
+					steps_to_start = start_path_idx - path_idx;
 				}
 
-				if (block_idx != -1 && blocked) {
+				steps_on_path = std::min(steps_to_start, count);
+			} else {
+				steps_on_path = count;
+			}
+
+			steps_into_finish = count - steps_on_path;
+			int new_path_idx_nofinish = (path_idx + steps_on_path) % PATH_LENGTH;
+
+			if (steps_into_finish > 0) {
+				if (steps_into_finish > FINISH_LENGTH) {
+					// Piece cannot go further than length of finish
 					return false;
 				}
+
+				if (steps_on_path == 0 && piece->blocking) {
+					// Piece has to touch start twice
+					return false;
+				}
+
+				// TODO Check if pieces in finish are blocking the move
 			}
 
-			if (legal && !legal_check) {
+			// TODO Handle case where count < 0
+			int block_idx = next_blockade(path_idx);
+
+			bool blocked = (block_idx != path_idx && new_path_idx_nofinish >= block_idx);
+			if (new_path_idx_nofinish < path_idx) {
+				blocked = (block_idx == 0);
+			}
+
+			if (block_idx != -1 && blocked) {
+				// Piece cannot leapfrog another piece that is blocking
+				return false;
+			}
+
+			if (!legal_check) {
 				// Change board state
-				if (into_finish) {
-					// TODO
+				if (into_finish && steps_into_finish > 0) {
+					piece->area = Finish;
+					piece->position = steps_into_finish;
+
+					finish.at(steps_into_finish - 1) = std::move(piece);
 				} else {
-					path.at(new_path_idx_nofinish) = path.at(path_idx);
-					path.at(path_idx) = -1;
+					piece->blocking = false;
+					piece->position = new_path_idx_nofinish;
+
+					path.at(new_path_idx_nofinish) = std::move(piece);
 				}
 			}
 
-			return legal;
+			return true;
 		}
 
 		void send_to_kennel(int player, int path_idx_start, int path_idx_end) {
@@ -194,23 +246,55 @@ class DogGame {
 			for (int i = path_idx_start; i < path_idx_end; i++) {
 				int i_mod = i % PATH_LENGTH;
 
-				int player_on_path = path.at(i_mod);
-				if (player_on_path != -1 && player_on_path != player) {
-					place_at_kennel(player_on_path);
-					path.at(i_mod) = -1;
+				PiecePtr& piece = path.at(i_mod);
+
+				if (piece != nullptr && piece->player != player) {
+					place_at_kennel(piece);
 				}
 			}
 		}
 
-		void place_at_kennel(int player) {
-			auto& kennel = kennels[player];
+		void place_at_kennel(PiecePtr& piece) {
+			auto& kennel = kennels.at(piece->player);
 
 			for (std::size_t i = 0; i < kennel.size(); i++) {
-				if (kennel[i] == false) {
-					kennel[i] = true;
+				if (kennel.at(i) == nullptr) {
+					kennel.at(i) = std::move(piece);
+
+					piece->area = Kennel;
+					piece->blocking = true;
+					piece->position = i;
+
 					return;
 				}
 			}
+		}
+
+		bool swap_pieces(int player, int path_idx_player, int path_idx_other) {
+			PiecePtr& piece_player = path.at(path_idx_player);
+			PiecePtr& piece_other = path.at(path_idx_other);
+
+			if (piece_player == nullptr || piece_other == nullptr) {
+				return false;
+			}
+
+			if (piece_player->player != player) {
+				return false;
+			}
+
+			if (path_idx_player == path_idx_other) {
+				return false;
+			}
+
+			if (piece_player->blocking || piece_other->blocking) {
+				return false;
+			}
+
+			PiecePtr temp = std::move(piece_other);
+			piece_other = std::move(piece_player);
+			piece_player = std::move(temp);
+
+			return true;
 		}
 
 		// TODO Let this only build a string instead of printing it
@@ -222,12 +306,12 @@ class DogGame {
 
 					switch (spec) {
 						case 1: {
-							int player = path.at(val);
+							PiecePtr& piece = path.at(val);
 
-							if (player == -1) {
+							if (piece == nullptr) {
 								std::cout << 'o';
 							} else {
-								std::cout << player;
+								std::cout << piece->player;
 							}
 
 							break;
@@ -236,7 +320,7 @@ class DogGame {
 							int player = val / 10;
 							int finish_idx = val % 10;
 
-							bool occupied = finishes[player][finish_idx];
+							bool occupied = (finishes.at(player).at(finish_idx) != nullptr);
 
 							if (occupied) {
 								std::cout << player;
@@ -250,7 +334,7 @@ class DogGame {
 							int player = val / 10;
 							int finish_idx = val % 10;
 
-							bool occupied = kennels[player][finish_idx];
+							bool occupied = (kennels.at(player).at(finish_idx) != nullptr);
 
 							if (occupied) {
 								std::cout << player;
