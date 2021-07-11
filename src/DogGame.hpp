@@ -205,7 +205,12 @@ class DogGame {
 					return false;
 				}
 
-				// TODO Check if pieces in finish are blocking the move
+				for (int i = 0; i < steps_into_finish; i++) {
+					if (finish.at(i) != nullptr) {
+						// Piece cannot leapfrog another piece in finish
+						return false;
+					}
+				}
 			}
 
 			// TODO Handle case where count < 0
