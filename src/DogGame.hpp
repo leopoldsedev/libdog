@@ -143,8 +143,8 @@ class DogGame {
 		}
 
 		int next_blockade(int from_path_idx) {
-			// TODO Implement remembering that a second touch of the start by one marble makes in not blocking
 			int next_section = from_path_idx / PATH_SECTION_LENGTH + 1;
+
 			for (int i = next_section; i < next_section + PLAYER_COUNT; i++) {
 				int section_id = i % PLAYER_COUNT;
 				int possible_blockade_idx = section_id * PATH_SECTION_LENGTH;
@@ -174,7 +174,7 @@ class DogGame {
 
 			int start_path_idx = player * PATH_SECTION_LENGTH;
 			int steps_into_finish;
-			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes[player];
+			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
 
 			if (into_finish) {
 				int steps_to_start;
@@ -234,6 +234,43 @@ class DogGame {
 
 					path.at(new_path_idx_nofinish) = std::move(piece);
 				}
+			}
+
+			return true;
+		}
+
+		bool move_piece_in_finish(int player, int finish_idx, int count, bool legal_check) {
+			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
+
+			PiecePtr& piece = finish.at(finish_idx);
+
+			if (piece == nullptr) {
+				// Piece needs to be at given index
+				return false;
+			}
+
+			if (count < 0) {
+				// Piece cannot go backwards in finish
+				return false;
+			}
+
+			int finish_idx_target = finish_idx + count;
+
+			if (finish_idx_target >= FINISH_LENGTH) {
+				// Piece cannot go further than length of finish
+				return false;
+			}
+
+			for (int i = finish_idx + 1; i < finish_idx_target; i++) {
+				if (finish.at(i) != nullptr) {
+					// Piece cannot leapfrog another piece in finish
+					return false;
+				}
+			}
+
+			if (!legal_check) {
+				// Change board state
+				finish.at(finish_idx_target) = std::move(piece);
 			}
 
 			return true;
