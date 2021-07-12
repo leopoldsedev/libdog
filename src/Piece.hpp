@@ -1,3 +1,6 @@
+#ifndef PIECE_HPP
+#define PIECE_HPP
+
 #include "Area.hpp"
 
 
@@ -17,3 +20,5 @@ class Piece {
 		Piece(int player, int position, Area area, bool blocking) : player(player), position(position), area(area), blocking(blocking) {
 		}
 };
+
+#endif

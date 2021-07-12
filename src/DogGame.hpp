@@ -1,3 +1,6 @@
+#ifndef DOG_GAME_HPP
+#define DOG_GAME_HPP
+
 #include <iostream>
 #include <sstream>
 #include <array>
@@ -5,6 +8,7 @@
 
 #include "Deck.hpp"
 #include "Piece.hpp"
+#include "CardPlay.hpp"
 
 #define PLAYER_COUNT (4)
 #define MAX_CARDS_HAND (6)
@@ -103,15 +107,105 @@ class DogGame {
 			next_hand_size = 6;
 		}
 
-//        bool play_card(int player, Card card) {
-//            bool legal = true;
-//
-//            return legal;
-//        }
+		bool play_card(CardPlay& card_play, bool check_turn, bool check_hand) {
+			if (!card_play.is_valid()) {
+				return false;
+			}
+
+			if (check_turn) {
+				if (card_play.player != player_turn) {
+					// It needs to be the player's turn
+					return false;
+				}
+			}
+
+			if (check_hand) {
+				auto& hand = hands.at(card_play.player);
+
+				bool card_in_hand = false;
+				for (std::size_t i = 0; i < hand.size(); i++) {
+					if (hand.at(i) == card_play.card) {
+						card_in_hand = true;
+						break;
+					}
+				}
+
+				if (!card_in_hand) {
+					// Card being played must be in hand
+					return false;
+				}
+			}
+
+			CardPlay* play;
+			if (card_play.card == Joker) {
+				play = card_play.joker_card.get();
+			} else {
+				play = &card_play;
+			}
+
+			bool legal;
+
+			if (play->start_card) {
+				legal = start(play->player);
+			} else {
+				if (play->card == Seven) {
+					for (std::size_t i = 0; i < play->target_positions.size(); i++) {
+						bool into_finish = play->into_finish.at(i);
+						int idx = play->target_positions.at(i).idx;
+						int count = play->counts.at(i);
+
+						if (into_finish) {
+							legal = move_piece(play->player, idx, count, into_finish, true);
+						} else {
+							legal = move_piece_in_finish(play->player, idx, count, true);
+						}
+
+						if (!legal) {
+							break;
+						}
+					}
+
+					if (legal) {
+						for (std::size_t i = 0; i < play->target_positions.size(); i++) {
+							bool into_finish = play->into_finish.at(i);
+							int idx = play->target_positions.at(i).idx;
+							int count = play->counts.at(i);
+
+							if (play->target_positions.at(i).area == Finish) {
+								legal = move_piece_in_finish(play->player, idx, count, false);
+							} else {
+								legal = move_piece(play->player, idx, count, into_finish, false);
+							}
+						}
+					}
+				} else if (play->card == Jack) {
+					int idx_player = play->target_positions.at(0).idx;
+					int idx_other = play->target_positions.at(1).idx;
+
+					legal = swap_pieces(play->player, idx_player, idx_other, false);
+				} else {
+					int count = play->move_count();
+
+					bool into_finish = play->into_finish.at(0);
+					int idx = play->target_positions.at(0).idx;
+
+					if (play->target_positions.at(0).area == Finish) {
+						legal = move_piece_in_finish(play->player, idx, count, false);
+					} else {
+						legal = move_piece(play->player, idx, count, into_finish, false);
+					}
+				}
+			}
+
+			if (legal) {
+				player_turn++;
+				player_turn %= PLAYER_COUNT;
+			}
+
+			return legal;
+		}
 
 		bool start(int player) {
-			bool legal = false;
-
 			auto& kennel = kennels.at(player);
 
 			for (std::size_t i = 0; i < kennel.size(); i++) {
@@ -186,7 +280,11 @@ class DogGame {
 					steps_to_start = start_path_idx - path_idx;
 				}
 
-				steps_on_path = std::min(steps_to_start, count);
+				if (piece->blocking) {
+					steps_on_path = count;
+				} else {
+					steps_on_path = std::min(steps_to_start, count);
+				}
 			} else {
 				steps_on_path = count;
 			}
@@ -426,3 +524,5 @@ class DogGame {
 			return ss.str();
 		}
 };
+
+#endif

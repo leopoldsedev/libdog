@@ -99,3 +99,142 @@ TEST(BasicTest, MovePiece) {
 
 	EXPECT_NE(game.path.at(0), nullptr);
 }
+
+TEST(CardTest, MovePiece) {
+	DogGame game;
+	bool legal;
+	CardPlay play = CardPlay(0, Ace, true);
+
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(0), nullptr);
+
+	play.card = Two;
+	play.start_card = false;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 0));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(2), nullptr);
+}
+
+TEST(CardTest, Finish) {
+	DogGame game;
+	bool legal;
+	CardPlay play = CardPlay(0, King, true);
+
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(0), nullptr);
+
+	play.card = Queen;
+	play.start_card = false;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 0));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(12), nullptr);
+
+	play.card = Queen;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 12));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(24), nullptr);
+
+	play.card = Queen;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 24));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(36), nullptr);
+
+	play.card = Queen;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 36));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(48), nullptr);
+
+	play.card = Queen;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 48));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(60), nullptr);
+
+	play.card = Five;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 60));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.finishes.at(0).at(0), nullptr);
+
+	play.card = Three;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Finish, 0));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.finishes.at(0).at(3), nullptr);
+}
+
+TEST(CardTest, BackwardStartFinish) {
+	GTEST_SKIP();
+
+	DogGame game;
+	bool legal;
+	CardPlay play = CardPlay(0, Ace, true);
+
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(0), nullptr);
+
+	play.card = Four;
+	play.four_backwards = true;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 0));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.path.at(60), nullptr);
+
+	play.card = Eight;
+	play.four_backwards = false;
+	play.target_positions.clear();
+	play.into_finish.clear();
+	play.target_positions.push_back(BoardPosition(Path, 60));
+	play.into_finish.push_back(true);
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.finishes.at(0).at(3), nullptr);
+}
