@@ -25,3 +25,7 @@ debug:
 .PHONY: clean
 clean:
 	rm -r build
+
+.PHONY: test
+test: debug
+	cd build && ctest --verbose
