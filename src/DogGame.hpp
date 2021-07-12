@@ -5,6 +5,7 @@
 #include <sstream>
 #include <array>
 #include <memory>
+#include <cassert>
 
 #include "Deck.hpp"
 #include "Piece.hpp"
@@ -107,6 +108,20 @@ class DogGame {
 			next_hand_size = 6;
 		}
 
+		bool player_has_card(int player, Card card) {
+			auto& hand = hands.at(player);
+
+			bool card_in_hand = false;
+			for (std::size_t i = 0; i < hand.size(); i++) {
+				if (hand.at(i) == card) {
+					card_in_hand = true;
+					break;
+				}
+			}
+
+			return card_in_hand;
+		}
+
 		bool play_card(CardPlay& card_play, bool check_turn, bool check_hand) {
 			if (!card_play.is_valid()) {
 				return false;
@@ -120,15 +135,7 @@ class DogGame {
 			}
 
 			if (check_hand) {
-				auto& hand = hands.at(card_play.player);
-
-				bool card_in_hand = false;
-				for (std::size_t i = 0; i < hand.size(); i++) {
-					if (hand.at(i) == card_play.card) {
-						card_in_hand = true;
-						break;
-					}
-				}
+				bool card_in_hand = player_has_card(card_play.player, card_play.card);
 
 				if (!card_in_hand) {
 					// Card being played must be in hand
@@ -136,12 +143,7 @@ class DogGame {
 				}
 			}
 
-			CardPlay* play;
-			if (card_play.card == Joker) {
-				play = card_play.joker_card.get();
-			} else {
-				play = &card_play;
-			}
+			CardPlay* play = card_play.get_play();
 
 			bool legal;
 
@@ -149,34 +151,11 @@ class DogGame {
 				legal = start(play->player);
 			} else {
 				if (play->card == Seven) {
-					for (std::size_t i = 0; i < play->target_positions.size(); i++) {
-						bool into_finish = play->into_finish.at(i);
-						int idx = play->target_positions.at(i).idx;
-						int count = play->counts.at(i);
-
-						if (into_finish) {
-							legal = move_piece(play->player, idx, count, into_finish, true);
-						} else {
-							legal = move_piece_in_finish(play->player, idx, count, true);
-						}
-
-						if (!legal) {
-							break;
-						}
-					}
+					bool legal = move_multiple_pieces(play->player, play->target_positions, play->into_finish, play->counts, true);
 
 					if (legal) {
-						for (std::size_t i = 0; i < play->target_positions.size(); i++) {
-							bool into_finish = play->into_finish.at(i);
-							int idx = play->target_positions.at(i).idx;
-							int count = play->counts.at(i);
-
-							if (play->target_positions.at(i).area == Finish) {
-								legal = move_piece_in_finish(play->player, idx, count, false);
-							} else {
-								legal = move_piece(play->player, idx, count, into_finish, false);
-							}
-						}
+						legal = move_multiple_pieces(play->player, play->target_positions, play->into_finish, play->counts, false);
+						assert(legal);
 					}
 				} else if (play->card == Jack) {
 					int idx_player = play->target_positions.at(0).idx;
@@ -216,10 +195,9 @@ class DogGame {
 					PiecePtr& start = path.at(start_path_idx);
 
 					if (start != nullptr && start->blocking) {
-						legal = false;
+						// Start must not be blocked by a blocking piece
+						return false;
 					} else {
-						legal = true;
-
 						if (start != nullptr) {
 							send_to_kennel(player, start_path_idx, start_path_idx);
 						}
@@ -233,7 +211,7 @@ class DogGame {
 				}
 			}
 
-			return legal;
+			return true;
 		}
 
 		int next_blockade(int from_path_idx) {
@@ -312,6 +290,7 @@ class DogGame {
 			}
 
 			// TODO Handle case where count < 0
+			// TODO Handle case where count < 0 and into_finish == true
 			int block_idx = next_blockade(path_idx);
 
 			bool blocked = (block_idx != path_idx && new_path_idx_nofinish >= block_idx);
@@ -377,6 +356,28 @@ class DogGame {
 			}
 
 			return true;
+		}
+
+		bool move_multiple_pieces(int player, std::vector<BoardPosition> target_positions, std::vector<bool> into_finishes, std::vector<int> counts, bool legal_check) {
+			bool legal = true;
+
+			for (std::size_t i = 0; i < target_positions.size(); i++) {
+				bool into_finish = into_finishes.at(i);
+				int idx = target_positions.at(i).idx;
+				int count = counts.at(i);
+
+				if (into_finish) {
+					legal = move_piece(player, idx, count, into_finish, legal_check);
+				} else {
+					legal = move_piece_in_finish(player, idx, count, legal_check);
+				}
+
+				if (!legal) {
+					break;
+				}
+			}
+
+			return legal;
 		}
 
 		void send_to_kennel(int player, int path_idx_start, int path_idx_end) {
