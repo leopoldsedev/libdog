@@ -11,6 +11,7 @@
 #define JOKER_COUNT (3 * DECK_COUNT)
 
 
+// TODO Currently the deck assumes that it is only reshuffled after all cards that were drawn have been played. If this assumption is violated it may happen that cards are given out again even though they have not been played, yet.
 class Deck {
 	std::vector<Card> cards = {};
 	std::vector<Card> drawn = {};
@@ -52,7 +53,7 @@ class Deck {
 		}
 
 		static std::string card_to_str(Card card) {
-			std::string map[] = { "-", "A", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "J" };
+			std::string map[] = { "-", "A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "X" };
 			return map[card];
 		}
 
