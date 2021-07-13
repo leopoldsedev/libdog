@@ -8,11 +8,11 @@
 #include <cassert>
 
 #include "Deck.hpp"
+#include "Hand.hpp"
 #include "Piece.hpp"
 #include "CardPlay.hpp"
 
 #define PLAYER_COUNT (4)
-#define MAX_CARDS_HAND (6)
 
 #define PATH_LENGTH (64)
 #define PATH_SECTION_LENGTH (PATH_LENGTH / PLAYER_COUNT)
@@ -81,7 +81,7 @@ class DogGame {
 		std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
 		std::array<std::array<PiecePtr, KENNEL_SIZE>, PLAYER_COUNT> kennels;
 
-		std::array<std::array<Card, MAX_CARDS_HAND>, PLAYER_COUNT> hands;
+		std::array<Hand, PLAYER_COUNT> hands;
 
 		int player_turn;
 		int next_hand_size;
@@ -90,36 +90,38 @@ class DogGame {
 
 		DogGame() {
 			reset();
-			deck = Deck();
 		}
 
 		void reset() {
+			deck = Deck();
+
 			for (std::size_t player = 0; player != kennels.size(); player++) {
 				for (std::size_t j = 0; j != kennels.size(); j++) {
+					// TODO Is a delete/release needed somewhere?
 					kennels.at(player).at(j) = PiecePtr(new Piece(player));
 				}
 			}
 
 			for (std::size_t i = 0; i != hands.size(); i++) {
-				hands.at(i).fill(None);
+				hands.at(i).clear();
 			}
 
 			player_turn = 0;
 			next_hand_size = 6;
+
+			hand_out_cards();
 		}
 
-		bool player_has_card(int player, Card card) {
-			auto& hand = hands.at(player);
-
-			bool card_in_hand = false;
-			for (std::size_t i = 0; i < hand.size(); i++) {
-				if (hand.at(i) == card) {
-					card_in_hand = true;
-					break;
-				}
+		void hand_out_cards() {
+			for (std::size_t i = 0; i != hands.size(); i++) {
+				hands.at(i).draw_cards(deck, next_hand_size);
 			}
 
-			return card_in_hand;
+			if (next_hand_size == 2) {
+				next_hand_size = 6;
+			} else {
+				next_hand_size--;
+			}
 		}
 
 		bool play_card(CardPlay& card_play, bool check_turn, bool check_hand) {
@@ -135,9 +137,9 @@ class DogGame {
 			}
 
 			if (check_hand) {
-				bool card_in_hand = player_has_card(card_play.player, card_play.card);
+				bool player_has_card = hands.at(card_play.player).has_card(card_play.card) > 0;
 
-				if (!card_in_hand) {
+				if (!player_has_card) {
 					// Card being played must be in hand
 					return false;
 				}
@@ -179,6 +181,9 @@ class DogGame {
 			if (legal) {
 				player_turn++;
 				player_turn %= PLAYER_COUNT;
+
+				// TODO Hand out new cards if all hands are empty
+				// TODO Increment player_turn once again after handing out new cards
 			}
 
 			return legal;
@@ -516,9 +521,7 @@ class DogGame {
 
 			for (std::size_t i = 0; i < hands.size(); i++) {
 				ss << i << ": ";
-				for (auto& card : hands.at(i)) {
-					ss << Deck::card_to_str(card);
-				}
+				ss << hands.at(i);
 				ss << std::endl;
 			}
 
