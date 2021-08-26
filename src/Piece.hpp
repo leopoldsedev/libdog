@@ -7,6 +7,7 @@
 class Piece {
 	public:
 		const int player;
+		// TODO Update position/area when moving the piece
 		int position;
 		Area area;
 		bool blocking;

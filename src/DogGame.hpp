@@ -7,20 +7,11 @@
 #include <memory>
 #include <cassert>
 
+#include "BoardState.hpp"
 #include "Deck.hpp"
 #include "Hand.hpp"
 #include "Piece.hpp"
 #include "CardPlay.hpp"
-
-#define PLAYER_COUNT (4)
-
-#define PATH_LENGTH (64)
-#define PATH_SECTION_LENGTH (PATH_LENGTH / PLAYER_COUNT)
-#define FINISH_LENGTH (4)
-#define KENNEL_SIZE (4)
-
-
-typedef std::unique_ptr<Piece> PiecePtr;
 
 
 class DogGame {
@@ -77,15 +68,12 @@ class DogGame {
 			}
 		};
 
-		std::array<PiecePtr, PATH_LENGTH> path;
-		std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
-		std::array<std::array<PiecePtr, KENNEL_SIZE>, PLAYER_COUNT> kennels;
-
 		std::array<Hand, PLAYER_COUNT> hands;
 
 		int player_turn;
 		int next_hand_size;
 
+		BoardState board_state;
 		Deck deck;
 
 		DogGame() {
@@ -94,13 +82,7 @@ class DogGame {
 
 		void reset() {
 			deck = Deck();
-
-			for (std::size_t player = 0; player != kennels.size(); player++) {
-				for (std::size_t j = 0; j != kennels.size(); j++) {
-					// TODO Is a delete/release needed somewhere?
-					kennels.at(player).at(j) = PiecePtr(new Piece(player));
-				}
-			}
+			board_state = BoardState();
 
 			for (std::size_t i = 0; i != hands.size(); i++) {
 				hands.at(i).clear();
@@ -191,31 +173,18 @@ class DogGame {
 		}
 
 		bool start(int player) {
-			auto& kennel = kennels.at(player);
+			PiecePtr& start = board_state.get_start(player);
 
-			for (std::size_t i = 0; i < kennel.size(); i++) {
-				PiecePtr& piece = kennel.at(i);
-
-				if (piece != nullptr) {
-					int start_path_idx = player * PATH_SECTION_LENGTH;
-					PiecePtr& start = path.at(start_path_idx);
-
-					if (start != nullptr && start->blocking) {
-						// Start must not be blocked by a blocking piece
-						return false;
-					} else {
-						if (start != nullptr) {
-							send_to_kennel(player, start_path_idx, start_path_idx);
-						}
-
-						piece->area = Path;
-						piece->position = start_path_idx;
-						start = std::move(piece);
-					}
-
-					break;
-				}
+			if (start != nullptr && start->blocking) {
+				// Start must not be blocked by a blocking piece
+				return false;
 			}
+
+			if (start != nullptr) {
+				board_state.place_at_kennel(start);
+			}
+
+			board_state.start(player);
 
 			return true;
 		}
@@ -231,7 +200,7 @@ class DogGame {
 					int section_id = i % PLAYER_COUNT;
 					int possible_blockade_idx = section_id * PATH_SECTION_LENGTH;
 
-					PiecePtr& piece = path.at(possible_blockade_idx);
+					PiecePtr& piece = board_state.path.at(possible_blockade_idx);
 
 					if (piece != nullptr && piece->blocking) {
 						result = possible_blockade_idx;
@@ -245,7 +214,7 @@ class DogGame {
 					int section_id = i % PLAYER_COUNT;
 					int possible_blockade_idx = section_id * PATH_SECTION_LENGTH;
 
-					PiecePtr& piece = path.at(possible_blockade_idx);
+					PiecePtr& piece = board_state.path.at(possible_blockade_idx);
 
 					if (piece != nullptr && piece->blocking) {
 						result = possible_blockade_idx;
@@ -266,7 +235,7 @@ class DogGame {
 		}
 
 		bool move_piece(int player, int path_idx, int count, bool into_finish, bool legal_check) {
-			PiecePtr& piece = path.at(path_idx);
+			PiecePtr& piece = board_state.path.at(path_idx);
 
 			if (piece == nullptr) {
 				return false;
@@ -285,7 +254,7 @@ class DogGame {
 
 			int start_path_idx = player * PATH_SECTION_LENGTH;
 			int steps_into_finish;
-			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
+			std::array<PiecePtr, FINISH_LENGTH>& finish = board_state.finishes.at(player);
 
 			if (into_finish && !backwards) {
 				int steps_to_start;
@@ -372,7 +341,7 @@ class DogGame {
 					piece->blocking = false;
 					piece->position = new_path_idx_nofinish;
 
-					path.at(new_path_idx_nofinish) = std::move(piece);
+					board_state.path.at(new_path_idx_nofinish) = std::move(piece);
 				}
 			}
 
@@ -380,7 +349,7 @@ class DogGame {
 		}
 
 		bool move_piece_in_finish(int player, int finish_idx, int count, bool legal_check) {
-			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
+			std::array<PiecePtr, FINISH_LENGTH>& finish = board_state.finishes.at(player);
 
 			PiecePtr& piece = finish.at(finish_idx);
 
@@ -446,33 +415,17 @@ class DogGame {
 			for (int i = path_idx_start; i < path_idx_end; i++) {
 				int i_mod = i % PATH_LENGTH;
 
-				PiecePtr& piece = path.at(i_mod);
+				PiecePtr& piece = board_state.path.at(i_mod);
 
 				if (piece != nullptr && piece->player != player) {
-					place_at_kennel(piece);
-				}
-			}
-		}
-
-		void place_at_kennel(PiecePtr& piece) {
-			auto& kennel = kennels.at(piece->player);
-
-			for (std::size_t i = 0; i < kennel.size(); i++) {
-				if (kennel.at(i) == nullptr) {
-					kennel.at(i) = std::move(piece);
-
-					piece->area = Kennel;
-					piece->blocking = true;
-					piece->position = i;
-
-					return;
+					board_state.place_at_kennel(piece);
 				}
 			}
 		}
 
 		bool swap_pieces(int player, int path_idx_player, int path_idx_other, bool legal_check) {
-			PiecePtr& piece_player = path.at(path_idx_player);
-			PiecePtr& piece_other = path.at(path_idx_other);
+			PiecePtr& piece_player = board_state.path.at(path_idx_player);
+			PiecePtr& piece_other = board_state.path.at(path_idx_other);
 
 			if (piece_player == nullptr || piece_other == nullptr) {
 				return false;
@@ -513,7 +466,7 @@ class DogGame {
 
 					switch (spec) {
 						case 1: {
-							const PiecePtr& piece = path.at(val);
+							const PiecePtr& piece = board_state.path.at(val);
 
 							if (piece == nullptr) {
 								ss << 'o';
@@ -527,7 +480,7 @@ class DogGame {
 							int player = val / 10;
 							int finish_idx = val % 10;
 
-							bool occupied = (finishes.at(player).at(finish_idx) != nullptr);
+							bool occupied = (board_state.finishes.at(player).at(finish_idx) != nullptr);
 
 							if (occupied) {
 								ss << player;
@@ -541,7 +494,7 @@ class DogGame {
 							int player = val / 10;
 							int finish_idx = val % 10;
 
-							bool occupied = (kennels.at(player).at(finish_idx) != nullptr);
+							bool occupied = (board_state.kennels.at(player).at(finish_idx) != nullptr);
 
 							if (occupied) {
 								ss << player;
