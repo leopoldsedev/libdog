@@ -2,6 +2,8 @@
 
 #include "BoardState.hpp"
 #include "DogGame.hpp"
+#include "debug.hpp"
+
 
 
 void check_state(DogGame& game) {
@@ -76,7 +78,7 @@ TEST(BasicTest, Reset) {
 TEST(BasicTest, Start) {
 	DogGame game;
 
-	game.start(0);
+	game.start_piece(0);
 
 	check_state(game);
 
@@ -86,18 +88,90 @@ TEST(BasicTest, Start) {
 TEST(BasicTest, MovePiece) {
 	DogGame game;
 
-	game.start(0);
+	game.start_piece(0);
 
 	for (int i = 0; i < 2 * PATH_LENGTH; i++) {
 		bool legal;
 
-		legal = game.move_piece(0, i % PATH_LENGTH, 1, false, false);
+		legal = game.move_piece(0, BoardPosition(i % PATH_LENGTH), 1, false, false);
 
 		EXPECT_TRUE(legal);
 
 		check_state(game);
 	}
 
+	EXPECT_NE(game.board_state.path.at(0), nullptr);
+}
+
+TEST(BasicTest, Blockades) {
+	DogGame game;
+
+	game.start_piece(0);
+
+	bool legal;
+
+	legal = game.move_piece(0, BoardPosition(0), PATH_SECTION_LENGTH, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(PATH_SECTION_LENGTH), -PATH_SECTION_LENGTH, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(0), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(0), -PATH_SECTION_LENGTH, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(PATH_LENGTH - PATH_SECTION_LENGTH), PATH_SECTION_LENGTH, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(0), nullptr);
+
+	game.start_piece(1);
+	game.start_piece(2);
+	game.start_piece(3);
+
+	legal = game.move_piece(0, BoardPosition(0), PATH_SECTION_LENGTH, false, false);
+	EXPECT_FALSE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(0), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(0), -PATH_SECTION_LENGTH, false, false);
+	EXPECT_FALSE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(0), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(0), PATH_SECTION_LENGTH - 1, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(PATH_SECTION_LENGTH - 1), 1, false, false);
+	EXPECT_FALSE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(PATH_SECTION_LENGTH - 1), -(PATH_SECTION_LENGTH - 1), false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(0), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(0), -(PATH_SECTION_LENGTH - 1), false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1)), -1, false, false);
+	EXPECT_FALSE(legal);
+	check_state(game);
+	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
+
+	legal = game.move_piece(0, BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1)), PATH_SECTION_LENGTH - 1, false, false);
+	EXPECT_TRUE(legal);
+	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 }
 

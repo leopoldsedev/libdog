@@ -28,4 +28,4 @@ clean:
 
 .PHONY: test
 test: debug
-	cd build && ctest --verbose
+	cd build && ctest --verbose --stop-on-failure

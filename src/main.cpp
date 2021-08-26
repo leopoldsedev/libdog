@@ -15,7 +15,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 
 	std::cout << game << std::endl;
 
-	game.start(0);
+	game.start_piece(0);
 //    game.start(1);
 //    game.start(2);
 //    game.start(3);
@@ -25,7 +25,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 	bool legal = true;
 //    while (true) {
 	for (i = 0; i < 65; i++) {
-		legal = game.move_piece(0, i % 64, 1, i != 0, false);
+		legal = game.move_piece(0, BoardPosition(i % 64), 1, i != 0, false);
 		if (!legal) {
 			std::cout << "illegal move" << std::endl;
 			break;
@@ -38,7 +38,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 
 	i = 0;
 	while (true) {
-		legal = game.move_piece_in_finish(0, i, 1, false);
+//        legal = game.move_piece_in_finish(0, i, 1, false);
 		if (!legal) {
 			std::cout << "illegal move" << std::endl;
 			break;

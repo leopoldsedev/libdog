@@ -38,7 +38,7 @@ class BoardState {
 			}
 		}
 
-		void start(int player) {
+		void start_piece(int player) {
 			auto& kennel = kennels.at(player);
 
 			for (std::size_t i = 0; i < kennel.size(); i++) {
@@ -93,6 +93,26 @@ class BoardState {
 			}
 		}
 
+		void move_piece(PiecePtr& piece, BoardPosition position) {
+			assert(piece != nullptr);
+
+			PiecePtr& target = get_piece(position);
+
+			piece->area = position.area;
+			piece->position = position.idx;
+			piece->blocking = false;
+			target = std::move(piece);
+			// TODO Is here a memory leak if there was already a piece at the target position?
+		}
+
+		void swap_pieces(PiecePtr& piece1, PiecePtr& piece2) {
+			assert(piece1 != nullptr);
+			assert(piece2 != nullptr);
+
+			PiecePtr temp = std::move(piece1);
+			piece1 = std::move(piece2);
+			piece2 = std::move(temp);
+		}
 };
 
 #endif

@@ -10,10 +10,13 @@ class BoardPosition {
 		int player;
 		int idx;
 
-		BoardPosition(Area area, int player, int idx) : area(area), player(player), idx(idx) {
+		explicit BoardPosition(Area area, int player, int idx) : area(area), player(player), idx(idx) {
 		}
 
-		BoardPosition(int idx) : area(Path), player(-1), idx(idx) {
+		explicit BoardPosition(int idx) : area(Path), player(-1), idx(idx) {
+		}
+
+		explicit BoardPosition() : area(Path), player(-1), idx(-1) {
 		}
 };
 
