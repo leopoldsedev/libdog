@@ -205,8 +205,6 @@ TEST(CardTest, Finish) {
 }
 
 TEST(CardTest, BackwardStartFinish) {
-	GTEST_SKIP();
-
 	DogGame game;
 	bool legal;
 	CardPlay play = CardPlay(0, Ace, true);
@@ -217,6 +215,7 @@ TEST(CardTest, BackwardStartFinish) {
 	EXPECT_NE(game.path.at(0), nullptr);
 
 	play.card = Four;
+	play.start_card = false;
 	play.four_backwards = true;
 	play.target_positions.clear();
 	play.into_finish.clear();
