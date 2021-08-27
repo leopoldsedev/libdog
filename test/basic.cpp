@@ -2,8 +2,7 @@
 
 #include "BoardState.hpp"
 #include "DogGame.hpp"
-#include "debug.hpp"
-
+#include "Debug.hpp"
 
 
 void check_state(DogGame& game) {
@@ -311,4 +310,11 @@ TEST(CardTest, BackwardStartFinish) {
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.finishes.at(0).at(3), nullptr);
+}
+
+TEST(FullGameTest, One) {
+	DogGame game;
+	bool legal;
+
+	PRINT_DBG(game);
 }

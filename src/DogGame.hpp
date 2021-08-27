@@ -1,6 +1,4 @@
-// TODO Add library prefix to all guards
-#ifndef DOG_GAME_HPP
-#define DOG_GAME_HPP
+#pragma once
 
 #include <iostream>
 #include <sstream>
@@ -12,7 +10,8 @@
 #include "CardsState.hpp"
 #include "Piece.hpp"
 #include "CardPlay.hpp"
-#include "debug.hpp"
+#include "Debug.hpp"
+#include "Util.hpp"
 
 
 class DogGame {
@@ -171,10 +170,6 @@ class DogGame {
 			}
 
 			return result;
-		}
-
-		int positive_mod(int i, int n) {
-			return ((i % n) + n) % n;
 		}
 
 		int calc_steps_to_start(int player, int from_path_idx) {
@@ -547,5 +542,3 @@ class DogGame {
 			return ss.str();
 		}
 };
-
-#endif

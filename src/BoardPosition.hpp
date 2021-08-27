@@ -1,5 +1,4 @@
-#ifndef BOARD_POSITION_HPP
-#define BOARD_POSITION_HPP
+#pragma once
 
 #include "Area.hpp"
 
@@ -19,5 +18,3 @@ class BoardPosition {
 		explicit BoardPosition() : area(Path), player(-1), idx(-1) {
 		}
 };
-
-#endif

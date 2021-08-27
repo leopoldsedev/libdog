@@ -1,5 +1,4 @@
-#ifndef DECK_HPP
-#define DECK_HPP
+#pragma once
 
 #include <iostream>
 #include <vector>
@@ -98,5 +97,3 @@ class Deck {
 			}
 		}
 };
-
-#endif

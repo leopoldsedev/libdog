@@ -1,5 +1,4 @@
-#ifndef BOARD_STATE_HPP
-#define BOARD_STATE_HPP
+#pragma once
 
 #include <array>
 #include <memory>
@@ -114,5 +113,3 @@ class BoardState {
 			piece2 = std::move(temp);
 		}
 };
-
-#endif

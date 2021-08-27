@@ -1,5 +1,4 @@
-#ifndef CARD_PLAY_HPP
-#define CARD_PLAY_HPP
+#pragma once
 
 #include <vector>
 #include <memory>
@@ -160,5 +159,3 @@ class CardPlay {
 			return true;
 		}
 };
-
-#endif

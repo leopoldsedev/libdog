@@ -1,10 +1,7 @@
-#ifndef AREA_HPP
-#define AREA_HPP
+#pragma once
 
 enum Area {
 	Path,
 	Kennel,
 	Finish
 };
-
-#endif

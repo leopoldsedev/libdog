@@ -1,5 +1,4 @@
-#ifndef CARD_HPP
-#define CARD_HPP
+#pragma once
 
 #include <vector>
 
@@ -32,5 +31,3 @@ bool is_start_card(Card card) {
 	}
 	return false;
 }
-
-#endif

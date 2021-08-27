@@ -1,5 +1,4 @@
-#ifndef CARDS_STATE_HPP
-#define CARDS_STATE_HPP
+#pragma once
 
 #include <array>
 #include <cassert>
@@ -71,5 +70,3 @@ class CardsState {
 			}
 		}
 };
-
-#endif
