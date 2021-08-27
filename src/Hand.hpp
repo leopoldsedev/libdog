@@ -18,6 +18,10 @@ class Hand {
 			cards.clear();
 		}
 
+		void add_card(Card card) {
+			cards.push_back(card);
+		}
+
 		void draw_cards(Deck& deck, int count) {
 			for (int i = 0; i < count; i++) {
 				Card new_card = deck.draw();
@@ -25,7 +29,11 @@ class Hand {
 			}
 		}
 
-		int has_card(Card card) {
+		int size() {
+			return cards.size();
+		}
+
+		bool has_card(Card card) {
 			return std::any_of(
 				cards.begin(),
 				cards.end(),
