@@ -75,34 +75,24 @@ class DogGame {
 			} else {
 				if (play->card == Seven) {
 					// TODO Check that the seven can only be split between *one* of the teammate's pieces and any number of the player's own pieces
-					bool legal = move_multiple_pieces(play->player, play->target_positions, play->into_finish, play->counts, true);
+					bool legal = move_multiple_pieces(play->player, play->target_pieces, play->into_finish, play->counts, true);
 
 					if (legal) {
-						legal = move_multiple_pieces(play->player, play->target_positions, play->into_finish, play->counts, false);
+						legal = move_multiple_pieces(play->player, play->target_pieces, play->into_finish, play->counts, false);
 						assert(legal);
 					}
 				} else if (play->card == Jack) {
-					int idx_player = play->target_positions.at(0).idx;
-					int idx_other = play->target_positions.at(1).idx;
+					int idx_player = board_state.ref_to_pos(play->target_pieces.at(0)).idx;
+					int idx_other = board_state.ref_to_pos(play->target_pieces.at(1)).idx;
 
 					legal = swap_pieces(play->player, idx_player, idx_other, false);
 				} else {
 					int count = play->move_count();
 
 					bool into_finish = play->into_finish.at(0);
-					BoardPosition position = play->target_positions.at(0);
-					PiecePtr& piece = board_state.get_piece(position);
+					BoardPosition position = board_state.ref_to_pos(play->target_pieces.at(0));
 
-					BoardPosition position_result;
-
-					legal = move_piece(play->player, position, count, into_finish, position_result);
-
-					if (legal) {
-						// Change board state
-						PiecePtr& piece_to_send_back = board_state.get_piece(position_result);
-						board_state.place_at_kennel(piece_to_send_back);
-						board_state.move_piece(piece, position_result);
-					}
+					legal = move_piece(play->player, position, count, into_finish, false, false);
 				}
 			}
 
@@ -142,7 +132,8 @@ class DogGame {
 			return true;
 		}
 
-		bool move_piece(int player, BoardPosition position, int count, bool into_finish, BoardPosition& position_result) {
+		bool move_piece(int player, BoardPosition position, int count, bool into_finish, bool legal_check, bool remove_all_on_way) {
+			BoardPosition position_result;
 			PiecePtr& piece = board_state.get_piece(position);
 
 			if (piece == nullptr) {
@@ -188,6 +179,21 @@ class DogGame {
 
 				bool legal = check_move(position, count, position_result);
 				if (!legal) return false;
+			}
+
+			if (!legal_check) {
+				// Change board state
+				if (remove_all_on_way) {
+					// TODO
+					assert(false);
+				} else {
+					PiecePtr& piece_to_send_back = board_state.get_piece(position_result);
+					if (piece_to_send_back != nullptr) {
+						board_state.place_at_kennel(piece_to_send_back);
+					}
+				}
+
+				board_state.move_piece(piece, position_result);
 			}
 
 			return true;
@@ -261,15 +267,15 @@ class DogGame {
 			assert(false);
 		}
 
-		bool move_multiple_pieces(int player, std::vector<BoardPosition> target_positions, std::vector<bool> into_finishes, std::vector<int> counts, bool legal_check) {
+		bool move_multiple_pieces(int player, std::vector<PieceRef> target_pieces, std::vector<bool> into_finishes, std::vector<int> counts, bool legal_check) {
 			bool legal = true;
 
-			for (std::size_t i = 0; i < target_positions.size(); i++) {
+			for (std::size_t i = 0; i < target_pieces.size(); i++) {
 				bool into_finish = into_finishes.at(i);
-				BoardPosition position = target_positions.at(i);
+				BoardPosition position = board_state.ref_to_pos(target_pieces.at(i));
 				int count = counts.at(i);
 
-				legal = move_piece(player, position, count, into_finish, legal_check);
+				legal = move_piece(player, position, count, into_finish, legal_check, false);
 
 				if (!legal) {
 					break;

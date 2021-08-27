@@ -2,9 +2,11 @@
 
 #include <vector>
 #include <memory>
+#include <algorithm>
 
-#include "Piece.hpp"
 #include "Card.hpp"
+#include "Piece.hpp"
+#include "PieceRef.hpp"
 #include "BoardPosition.hpp"
 
 
@@ -13,7 +15,7 @@ class CardPlay {
 		int player;
 		Card card;
 
-		std::vector<BoardPosition> target_positions;
+		std::vector<PieceRef> target_pieces;
 		std::vector<bool> into_finish;
 		std::vector<int> counts;
 
@@ -30,6 +32,9 @@ class CardPlay {
 		}
 
 		CardPlay(int player, Card card, bool start_card, bool ace_one, bool four_backwards) : player(player), card(card), start_card(start_card), ace_one(ace_one), four_backwards(four_backwards) {
+		}
+
+		CardPlay() {
 		}
 
 		CardPlay* get_play() {
@@ -108,7 +113,7 @@ class CardPlay {
 				return false;
 			}
 
-			if (target_positions.size() != into_finish.size()) {
+			if (target_pieces.size() != into_finish.size()) {
 				return false;
 			}
 
@@ -117,15 +122,15 @@ class CardPlay {
 			}
 
 			if (start_card) {
-				if (target_positions.size() != 0) {
+				if (target_pieces.size() != 0) {
 					return false;
 				}
 			} else {
-				if (card != Seven && card != Jack && target_positions.size() > 1) {
+				if (card != Seven && card != Jack && target_pieces.size() > 1) {
 					return false;
 				}
 
-				if (card == Jack && target_positions.size() != 2) {
+				if (card == Jack && target_pieces.size() != 2) {
 					return false;
 				}
 
@@ -134,7 +139,7 @@ class CardPlay {
 				}
 
 				if (card == Seven) {
-					if (target_positions.size() != counts.size()) {
+					if (target_pieces.size() != counts.size()) {
 						return false;
 					}
 
@@ -154,6 +159,58 @@ class CardPlay {
 
 			if (card == Joker && joker_card == nullptr) {
 				return false;
+			}
+
+			return true;
+		}
+
+		bool from_notation(int player, std::string notation_str) {
+			// Remove all whitespace from string
+			// Source: https://stackoverflow.com/a/83538/3118787
+			notation_str.erase(remove_if(notation_str.begin(), notation_str.end(), ::isspace), notation_str.end());
+
+			// TODO Reset all fields first
+
+			std::string card_str = notation_str.substr(0, 1);
+			notation_str.erase(0, 1);
+
+			card = card_from_string(card_str);
+
+			switch (card) {
+				case None:
+					break;
+				case Ace:
+					start_card = (notation_str.substr(0, 1) == "#");
+					break;
+				case Two:
+					break;
+				case Three:
+					break;
+				case Four:
+					break;
+				case Five:
+					break;
+				case Six:
+					break;
+				case Seven:
+					break;
+				case Eight:
+					break;
+				case Nine:
+					break;
+				case Ten:
+					break;
+				case Jack:
+					break;
+				case Queen:
+					break;
+				case King:
+					start_card = (notation_str.substr(0, 1) == "#");
+					break;
+				case Joker:
+					break;
+				default:
+					break;
 			}
 
 			return true;

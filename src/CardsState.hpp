@@ -43,7 +43,7 @@ class CardsState {
 
 		void remove_card_from_hand(int player, Card card) {
 			Hand& hand = get_hand(player);
-			bool had_card = hand.play_card(card);
+			hand.play_card(card);
 		}
 
 		bool hands_empty() {

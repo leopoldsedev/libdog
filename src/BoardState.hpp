@@ -6,8 +6,10 @@
 #include <cassert>
 
 #include "Piece.hpp"
+#include "PieceRef.hpp"
 #include "BoardPosition.hpp"
 #include "Util.hpp"
+#include "Debug.hpp"
 
 #define PLAYER_COUNT (4)
 #define PATH_LENGTH (64)
@@ -39,6 +41,69 @@ class BoardState {
 			}
 		}
 
+		BoardPosition ref_to_pos(PieceRef piece_ref) {
+			int player = piece_ref.player;
+			int rank = piece_ref.player;
+
+			int piece_idx = 0;
+
+			// Check pieces in finish
+			auto& finish = finishes.at(player);
+
+			for (int i = finish.size() - 1; i >= 0; i--) {
+				PiecePtr& piece = finish.at(i);
+
+				if (piece != nullptr) {
+					if (piece_idx == rank) {
+						return BoardPosition(Finish, player, i);
+					}
+					piece_idx++;
+				}
+			}
+
+			int start_path_idx = get_start_path_idx(player);
+
+			// Check non-blocking pieces on path
+			for (int i = start_path_idx; i >= (start_path_idx - (int) path.size()); i--) {
+				int i_mod = positive_mod(i, path.size());
+
+				PiecePtr& piece = path.at(i_mod);
+
+				if (piece != nullptr && piece->player == player && !piece->blocking) {
+					if (piece_idx == rank) {
+						return BoardPosition(Path, player, i_mod);
+					}
+					piece_idx++;
+				}
+			}
+
+			// Check potential blocking piece at start
+			PiecePtr& piece = path.at(start_path_idx);
+
+			if (piece != nullptr && piece->player == player && piece->blocking) {
+				if (piece_idx == rank) {
+					return BoardPosition(Path, player, start_path_idx);
+				}
+				piece_idx++;
+			}
+
+			// Check pieces in kennel
+			auto& kennel = kennels.at(player);
+
+			for (std::size_t i = 0; i < kennel.size(); i++) {
+				PiecePtr& piece = kennel.at(i);
+
+				if (piece != nullptr) {
+					if (piece_idx == rank) {
+						return BoardPosition(Kennel, player, i);
+					}
+					piece_idx++;
+				}
+			}
+
+			return BoardPosition();
+		}
+
 		void start_piece(int player) {
 			auto& kennel = kennels.at(player);
 
@@ -46,7 +111,7 @@ class BoardState {
 				PiecePtr& piece = kennel.at(i);
 
 				if (piece != nullptr) {
-					int start_path_idx = player * PATH_SECTION_LENGTH;
+					int start_path_idx = get_start_path_idx(player);
 					PiecePtr& start = path.at(start_path_idx);
 
 					piece->area = Path;
@@ -71,7 +136,7 @@ class BoardState {
 		}
 
 		PiecePtr& get_start(int player) {
-			int start_path_idx = player * PATH_SECTION_LENGTH;
+			int start_path_idx = get_start_path_idx(player);
 			PiecePtr& piece = get_piece(BoardPosition(start_path_idx));
 			return piece;
 		}
@@ -197,7 +262,6 @@ class BoardState {
 		}
 
 		int next_blockade(int from_path_idx, bool backwards) {
-			int next_section;
 			int result = -1;
 
 			std::vector<int> section_idices = get_section_indices(from_path_idx, backwards);
@@ -220,8 +284,12 @@ class BoardState {
 			return result;
 		}
 
+		static int get_start_path_idx(int player) {
+			return player * PATH_SECTION_LENGTH;
+		}
+
 		static int calc_steps_to_start(int player, int from_path_idx) {
-			int start_path_idx = player * PATH_SECTION_LENGTH;
+			int start_path_idx = get_start_path_idx(player);
 
 			int steps_to_start;
 

@@ -25,7 +25,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 	bool legal = true;
 //    while (true) {
 	for (i = 0; i < 65; i++) {
-		legal = game.move_piece(0, BoardPosition(i % 64), 1, i != 0, false);
+		legal = game.move_piece(0, BoardPosition(i % 64), 1, i != 0, false, false);
 		if (!legal) {
 			std::cout << "illegal move" << std::endl;
 			break;
