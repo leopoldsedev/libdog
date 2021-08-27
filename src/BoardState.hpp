@@ -1,11 +1,13 @@
 #pragma once
 
 #include <array>
+#include <vector>
 #include <memory>
 #include <cassert>
 
 #include "Piece.hpp"
 #include "BoardPosition.hpp"
+#include "Util.hpp"
 
 #define PLAYER_COUNT (4)
 #define PATH_LENGTH (64)
@@ -74,6 +76,22 @@ class BoardState {
 			return piece;
 		}
 
+		void send_to_kennel(int player, int path_idx_start, int path_idx_end) {
+			if (path_idx_start > path_idx_end) {
+				path_idx_end += PATH_LENGTH;
+			}
+
+			for (int i = path_idx_start; i < path_idx_end; i++) {
+				int i_mod = i % PATH_LENGTH;
+
+				PiecePtr& piece = get_piece(BoardPosition(i_mod));
+
+				if (piece != nullptr && piece->player != player) {
+					place_at_kennel(piece);
+				}
+			}
+		}
+
 		void place_at_kennel(PiecePtr& piece) {
 			assert(piece != nullptr);
 
@@ -111,5 +129,135 @@ class BoardState {
 			PiecePtr temp = std::move(piece1);
 			piece1 = std::move(piece2);
 			piece2 = std::move(temp);
+		}
+
+//        int possible_forward_steps_on_path(int from_path_idx, bool backwards) {
+//            int steps_possible = 0;
+//
+//            if (backwards) {
+//                steps_possible += 
+//            }
+//
+//            std::vector<int> section_idices = get_section_indices(from_path_idx, backwards);
+//
+//            for (int i : section_idices) {
+//                int possible_blockade_idx = i * PATH_SECTION_LENGTH;
+//
+//                PiecePtr& piece = get_piece(BoardPosition(possible_blockade_idx));
+//
+//                if (piece != nullptr && piece->blocking) {
+//                    result = possible_blockade_idx;
+//                    break;
+//                }
+//            }
+//        }
+
+		int possible_forward_steps_in_finish(int player, int from_finish_idx) {
+			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
+
+			int result = 0;
+
+			if (from_finish_idx < -1) {
+				result = -from_finish_idx - 1;
+				from_finish_idx = -1;
+			}
+
+			assert(from_finish_idx >= -1);
+
+			for (int i = from_finish_idx + 1; i < FINISH_LENGTH; i++) {
+				if (finish.at(i) == nullptr) {
+					result++;
+				}
+			}
+
+			return result;
+		}
+
+		std::vector<int> get_section_indices(int from_path_idx, bool backwards) {
+			// This will contain the section indices to check in correct order (nearest first)
+			std::vector<int> section_idices;
+
+			int next_section;
+
+			if (backwards) {
+				next_section = positive_mod(from_path_idx - 1, PATH_LENGTH) / PATH_SECTION_LENGTH;
+				for (int i = next_section; i > next_section - PLAYER_COUNT; i--) {
+					int section_id = positive_mod(i, PLAYER_COUNT);
+					section_idices.push_back(section_id);
+				}
+			} else {
+				next_section = from_path_idx / PATH_SECTION_LENGTH + 1;
+				for (int i = next_section; i < next_section + PLAYER_COUNT; i++) {
+					int section_id = positive_mod(i, PLAYER_COUNT);
+					section_idices.push_back(section_id);
+				}
+			}
+
+			return section_idices;
+		}
+
+		int next_blockade(int from_path_idx, bool backwards) {
+			int next_section;
+			int result = -1;
+
+			std::vector<int> section_idices = get_section_indices(from_path_idx, backwards);
+
+			for (int i : section_idices) {
+				int possible_blockade_idx = i * PATH_SECTION_LENGTH;
+
+				PiecePtr& piece = get_piece(BoardPosition(possible_blockade_idx));
+
+				if (piece != nullptr && piece->blocking) {
+					result = possible_blockade_idx;
+					break;
+				}
+			}
+
+			if (result == from_path_idx) {
+				result = -1;
+			}
+
+			return result;
+		}
+
+		static int calc_steps_to_start(int player, int from_path_idx) {
+			int start_path_idx = player * PATH_SECTION_LENGTH;
+
+			int steps_to_start;
+
+			if (start_path_idx < from_path_idx) {
+				steps_to_start = (start_path_idx + PATH_LENGTH) - from_path_idx;
+			} else {
+				steps_to_start = start_path_idx - from_path_idx;
+			}
+
+			return steps_to_start;
+		}
+
+		static int calc_steps_on_path(int player, BoardPosition position, bool piece_blocking, int count, bool into_finish) {
+			if (position.area != Path) {
+				return 0;
+			}
+
+			bool backwards = count < 0;
+
+			int steps_on_path;
+
+			if (into_finish && !backwards) {
+				int steps_to_start = calc_steps_to_start(player, position.idx);
+
+				if (piece_blocking) {
+					// Piece is blocked, which means it cannot enter finish directly -> forced to take all steps on path
+					steps_on_path = count;
+				} else {
+					// Piece may enter finish -> only needs to take steps on path to go right before finish
+					steps_on_path = std::min(steps_to_start, count);
+				}
+			} else {
+				// Piece going backwards or does not want to enter finish -> take all steps on path
+				steps_on_path = count;
+			}
+
+			return steps_on_path;
 		}
 };

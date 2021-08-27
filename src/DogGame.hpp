@@ -91,8 +91,18 @@ class DogGame {
 
 					bool into_finish = play->into_finish.at(0);
 					BoardPosition position = play->target_positions.at(0);
+					PiecePtr& piece = board_state.get_piece(position);
 
-					legal = move_piece(play->player, position, count, into_finish, false);
+					BoardPosition position_result;
+
+					legal = move_piece(play->player, position, count, into_finish, position_result);
+
+					if (legal) {
+						// Change board state
+						PiecePtr& piece_to_send_back = board_state.get_piece(position_result);
+						board_state.place_at_kennel(piece_to_send_back);
+						board_state.move_piece(piece, position_result);
+					}
 				}
 			}
 
@@ -132,85 +142,7 @@ class DogGame {
 			return true;
 		}
 
-		int next_blockade(int from_path_idx, bool backwards) {
-			int next_section;
-			int result = -1;
-
-			// This will contain the section indices to check in correct order (nearest first)
-			std::vector<int> section_idices;
-
-			if (backwards) {
-				next_section = positive_mod(from_path_idx - 1, PATH_LENGTH) / PATH_SECTION_LENGTH;
-				for (int i = next_section; i > next_section - PLAYER_COUNT; i--) {
-					int section_id = positive_mod(i, PLAYER_COUNT);
-					section_idices.push_back(section_id);
-				}
-			} else {
-				next_section = from_path_idx / PATH_SECTION_LENGTH + 1;
-				for (int i = next_section; i < next_section + PLAYER_COUNT; i++) {
-					int section_id = positive_mod(i, PLAYER_COUNT);
-					section_idices.push_back(section_id);
-				}
-			}
-
-			for (int i : section_idices) {
-				int section_id = i % PLAYER_COUNT;
-				int possible_blockade_idx = section_id * PATH_SECTION_LENGTH;
-
-				PiecePtr& piece = board_state.path.at(possible_blockade_idx);
-
-				if (piece != nullptr && piece->blocking) {
-					result = possible_blockade_idx;
-					break;
-				}
-			}
-
-			if (result == from_path_idx) {
-				result = -1;
-			}
-
-			return result;
-		}
-
-		int calc_steps_to_start(int player, int from_path_idx) {
-			int start_path_idx = player * PATH_SECTION_LENGTH;
-
-			int steps_to_start;
-
-			if (start_path_idx < from_path_idx) {
-				steps_to_start = (start_path_idx + PATH_LENGTH) - from_path_idx;
-			} else {
-				steps_to_start = start_path_idx - from_path_idx;
-			}
-
-			return steps_to_start;
-		}
-
-		int calc_steps_on_path(int player, BoardPosition position, bool piece_blocking, int count, bool into_finish) {
-			if (position.area != Path) {
-				return 0;
-			}
-
-			bool backwards = count < 0;
-
-			int steps_on_path;
-
-			if (into_finish && !backwards) {
-				int steps_to_start = calc_steps_to_start(player, position.idx);
-
-				if (piece_blocking) {
-					steps_on_path = count;
-				} else {
-					steps_on_path = std::min(steps_to_start, count);
-				}
-			} else {
-				steps_on_path = count;
-			}
-
-			return steps_on_path;
-		}
-
-		bool move_piece(int player, BoardPosition position, int count, bool into_finish, bool legal_check) {
+		bool move_piece(int player, BoardPosition position, int count, bool into_finish, BoardPosition& position_result) {
 			PiecePtr& piece = board_state.get_piece(position);
 
 			if (piece == nullptr) {
@@ -228,10 +160,8 @@ class DogGame {
 				return false;
 			}
 
-			BoardPosition position_result;
-
 			if (position.area == Path) {
-				int steps_on_path = calc_steps_on_path(player, position, piece->blocking, count, into_finish);
+				int steps_on_path = BoardState::calc_steps_on_path(player, position, piece->blocking, count, into_finish);
 				int steps_into_finish = count - steps_on_path;
 
 				if (steps_on_path != 0) {
@@ -260,14 +190,10 @@ class DogGame {
 				if (!legal) return false;
 			}
 
-			if (!legal_check) {
-				// Change board state
-				board_state.move_piece(piece, position_result);
-			}
-
 			return true;
 		}
 
+		// This function assumes no area crossing (piece stays in the area that it was in)
 		bool check_move(BoardPosition from_position, int count, BoardPosition& position_result) {
 			bool backwards = count < 0;
 
@@ -278,21 +204,15 @@ class DogGame {
 					return false;
 				}
 
-				std::array<PiecePtr, FINISH_LENGTH>& finish = board_state.finishes.at(from_position.player);
+				int steps_possible = board_state.possible_forward_steps_in_finish(from_position.player, from_position.idx);
 
-				int finish_idx_target = from_position.idx + count;
-
-				if (finish_idx_target >= FINISH_LENGTH) {
+				if (steps_possible < count) {
 					// Piece cannot go further than length of finish
+					// Piece cannot leapfrog another piece in finish
 					return false;
 				}
 
-				for (int i = from_position.idx + 1; i < finish_idx_target; i++) {
-					if (finish.at(i) != nullptr) {
-						// Piece cannot leapfrog another piece in finish
-						return false;
-					}
-				}
+				int finish_idx_target = from_position.idx + count;
 
 				position_result = BoardPosition(Finish, from_position.player, finish_idx_target);
 
@@ -301,7 +221,7 @@ class DogGame {
 				int path_idx = from_position.idx;
 				int target_path_idx = positive_mod(path_idx + count, PATH_LENGTH);
 
-				int next_block_idx = next_blockade(path_idx, backwards);
+				int next_block_idx = board_state.next_blockade(path_idx, backwards);
 
 				bool blocked;
 				if (next_block_idx == -1) {
@@ -341,12 +261,6 @@ class DogGame {
 			assert(false);
 		}
 
-		bool check_can_enter_finish(int player) {
-			PiecePtr& first_finish = board_state.get_piece(BoardPosition(Finish, player, 0));
-			bool can_enter = (first_finish == nullptr);
-			return can_enter;
-		}
-
 		bool move_multiple_pieces(int player, std::vector<BoardPosition> target_positions, std::vector<bool> into_finishes, std::vector<int> counts, bool legal_check) {
 			bool legal = true;
 
@@ -363,22 +277,6 @@ class DogGame {
 			}
 
 			return legal;
-		}
-
-		void send_to_kennel(int player, int path_idx_start, int path_idx_end) {
-			if (path_idx_start > path_idx_end) {
-				path_idx_end += PATH_LENGTH;
-			}
-
-			for (int i = path_idx_start; i < path_idx_end; i++) {
-				int i_mod = i % PATH_LENGTH;
-
-				PiecePtr& piece = board_state.path.at(i_mod);
-
-				if (piece != nullptr && piece->player != player) {
-					board_state.place_at_kennel(piece);
-				}
-			}
 		}
 
 		bool swap_pieces(int player, int path_idx_player, int path_idx_other, bool legal_check) {
