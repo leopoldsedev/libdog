@@ -10,4 +10,9 @@ class PieceRef {
 
 		explicit PieceRef(int player): player(player), rank(0) {
 		}
+
+		friend bool operator==(const PieceRef& a, const PieceRef& b)
+		{
+			return a.player == b.player && a.rank == b.rank;
+		}
 };

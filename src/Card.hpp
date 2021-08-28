@@ -50,10 +50,10 @@ inline Card card_from_string(std::string card_str) {
 		return Jack;
 	} else if (card_str == "Q") {
 		return Queen;
-	} else if (card_str == "Q") {
-		return Queen;
 	} else if (card_str == "K") {
 		return King;
+	} else if (card_str == "X") {
+		return Joker;
 	}
 
 	return None;

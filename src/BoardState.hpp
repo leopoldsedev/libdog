@@ -11,6 +11,7 @@
 #include "Util.hpp"
 #include "Debug.hpp"
 
+// TODO Put these into their own files (Constants.hpp) (then check usages and change/clean up includes accordingly)
 #define PLAYER_COUNT (4)
 #define PATH_LENGTH (64)
 #define PATH_SECTION_LENGTH (PATH_LENGTH / PLAYER_COUNT)

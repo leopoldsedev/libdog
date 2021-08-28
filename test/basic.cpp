@@ -92,9 +92,7 @@ TEST(BasicTest, MovePiece) {
 	for (int i = 0; i < 2 * PATH_LENGTH; i++) {
 		bool legal;
 
-		HERE;
 		legal = game.move_piece(0, BoardPosition(i % PATH_LENGTH), 1, false, false, false);
-		HERE;
 
 		EXPECT_TRUE(legal);
 
