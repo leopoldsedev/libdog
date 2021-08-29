@@ -5,6 +5,11 @@
 #include "Debug.hpp"
 
 
+#define EXPECT_PLAYER_AT(path_idx, player_id) do { \
+	EXPECT_NE(game.board_state.path.at(path_idx), nullptr); \
+	EXPECT_EQ(game.board_state.path.at(path_idx)->player, player_id); \
+} while(0)
+
 void check_state(DogGame& game) {
 	for (std::size_t player = 0; player != game.board_state.kennels.size(); player++) {
 		for (std::size_t j = 0; j != game.board_state.kennels.size(); j++) {
@@ -306,8 +311,25 @@ TEST(CardTest, SendToKennel) {
 }
 
 TEST(CardTest, Swap) {
-	GTEST_SKIP();
-	// TODO
+	DogGame game;
+
+	EXPECT_TRUE(game.play_card(CardPlay(0, "A#"), false, false));
+	EXPECT_TRUE(game.play_card(CardPlay(1, "A#"), false, false));
+
+	EXPECT_FALSE(game.play_card(CardPlay(0, "J010"), false, false));
+
+	EXPECT_TRUE(game.play_card(CardPlay(0, "A'0"), false, false));
+	EXPECT_TRUE(game.play_card(CardPlay(1, "A'0"), false, false));
+
+	PRINT_DBG(game);
+
+	EXPECT_PLAYER_AT(1, 0);
+	EXPECT_PLAYER_AT(17, 1);
+
+	EXPECT_TRUE(game.play_card(CardPlay(0, "J010"), false, false));
+
+	EXPECT_PLAYER_AT(1, 1);
+	EXPECT_PLAYER_AT(17, 0);
 }
 
 TEST(CardTest, Seven) {
