@@ -17,10 +17,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 set(SRC_EXT_PATTERN ".cpp")
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*${SRC_EXT_PATTERN})
+file(GLOB DEMO_FILES ${PROJECT_SOURCE_DIR}/demo/*${SRC_EXT_PATTERN})
 
 include_directories(src)
 
-add_executable(${PROJECT_NAME} ${SRC_FILES})
+add_executable(${PROJECT_NAME} ${SRC_FILES} ${DEMO_FILES})
 
 
 enable_testing()
@@ -31,7 +32,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*${SRC_EXT_PATTERN})
 add_executable(${TEST_NAME} ${TEST_SRC_FILES})
 
-target_link_libraries(${TEST_NAME} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(${TEST_NAME} ${GTEST_BOTH_LIBRARIES} ${SRC_FILES})
 
 include(GoogleTest)
 gtest_discover_tests(${TEST_NAME})

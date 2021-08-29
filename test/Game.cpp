@@ -252,7 +252,6 @@ TEST(CardTest, NoFinishFromStart) {
 
 TEST(CardTest, SendToKennel) {
 	DogGame game;
-	bool legal;
 	CardPlay play;
 
 	EXPECT_TRUE(game.play_card(CardPlay(0, "A#"), false, false));

@@ -1,6 +1,6 @@
 #pragma once
 
 
-int positive_mod(int i, int n) {
+inline int positive_mod(int i, int n) {
 	return ((i % n) + n) % n;
 }
