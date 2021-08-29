@@ -165,7 +165,7 @@ class BoardState {
 
 			auto& kennel = kennels.at(piece->player);
 
-			for (std::size_t i = kennel.size() - 1; i >= 0; i--) {
+			for (int i = kennel.size() - 1; i >= 0; i--) {
 				if (kennel.at(i) == nullptr) {
 					piece->area = Kennel;
 					piece->blocking = true;

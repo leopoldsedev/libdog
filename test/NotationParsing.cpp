@@ -15,6 +15,8 @@ TEST(NotationParsing, StartCard) {
 	EXPECT_EQ(play.card, Ace);
 	EXPECT_TRUE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K#");
@@ -22,6 +24,9 @@ TEST(NotationParsing, StartCard) {
 	EXPECT_TRUE(valid);
 	EXPECT_EQ(play.card, King);
 	EXPECT_TRUE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 }
 
@@ -36,6 +41,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "21");
@@ -48,6 +54,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "31");
@@ -60,6 +67,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "41");
@@ -72,6 +80,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "51");
@@ -84,6 +93,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "61");
@@ -96,6 +106,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "81");
@@ -108,6 +119,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "91");
@@ -120,6 +132,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "T1");
@@ -132,6 +145,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "Q1");
@@ -144,6 +158,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K1");
@@ -156,6 +171,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K0");
@@ -168,6 +184,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K2");
@@ -180,6 +197,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K3");
@@ -192,6 +210,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K3-");
@@ -204,6 +223,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	// TODO Add case for into_finish for all card types
@@ -217,6 +237,7 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 }
 
@@ -231,6 +252,7 @@ TEST(NotationParsing, AlternativeActions) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_TRUE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "4'2");
@@ -243,6 +265,7 @@ TEST(NotationParsing, AlternativeActions) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_TRUE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "A'3-");
@@ -255,6 +278,7 @@ TEST(NotationParsing, AlternativeActions) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_TRUE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 }
 
@@ -268,6 +292,7 @@ TEST(NotationParsing, Seven) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "712242'1");
@@ -279,6 +304,7 @@ TEST(NotationParsing, Seven) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "701010101010101");
@@ -290,6 +316,7 @@ TEST(NotationParsing, Seven) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "701-0'1-0'1-0'1-0'1-0'1-0'1-");
@@ -301,6 +328,7 @@ TEST(NotationParsing, Seven) {
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 }
 
@@ -349,47 +377,47 @@ TEST(NotationParsing, Jack) {
 TEST(NotationParsing, Joker) {
 	valid = play.from_notation(0, "XJ111");
 	EXPECT_TRUE(valid);
-	EXPECT_EQ(play.card, Joker);
-	EXPECT_EQ(play.get_play()->card, Jack);
-	EXPECT_EQ(play.get_play()->target_pieces.size(), 2);
-	EXPECT_EQ(play.get_play()->target_pieces.at(0).player, 0);
-	EXPECT_EQ(play.get_play()->target_pieces.at(0).rank, 1);
-	EXPECT_EQ(play.get_play()->target_pieces.at(1).player, 1);
-	EXPECT_EQ(play.get_play()->target_pieces.at(1).rank, 1);
+	EXPECT_EQ(play.card, Jack);
+	EXPECT_EQ(play.target_pieces.size(), 2);
+	EXPECT_EQ(play.target_pieces.at(0).player, 0);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 1);
+	EXPECT_EQ(play.target_pieces.at(1).player, 1);
+	EXPECT_EQ(play.target_pieces.at(1).rank, 1);
+	EXPECT_TRUE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "XA#");
 	EXPECT_TRUE(valid);
-	EXPECT_EQ(play.card, Joker);
-	EXPECT_EQ(play.get_play()->card, Ace);
-	EXPECT_TRUE(play.get_play()->start_card);
-	EXPECT_FALSE(play.get_play()->ace_one);
+	EXPECT_EQ(play.card, Ace);
+	EXPECT_TRUE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_TRUE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "XT1");
 	EXPECT_TRUE(valid);
-	EXPECT_EQ(play.card, Joker);
-	EXPECT_EQ(play.get_play()->card, Ten);
-	EXPECT_EQ(play.get_play()->target_pieces.size(), 1);
-	EXPECT_EQ(play.get_play()->target_pieces.at(0).player, 0);
-	EXPECT_EQ(play.get_play()->target_pieces.at(0).rank, 1);
-	EXPECT_TRUE(play.get_play()->into_finish.at(0));
-	EXPECT_FALSE(play.get_play()->start_card);
-	EXPECT_FALSE(play.get_play()->ace_one);
-	EXPECT_FALSE(play.get_play()->four_backwards);
+	EXPECT_EQ(play.card, Ten);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 0);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 1);
+	EXPECT_TRUE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_TRUE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "XA'3-");
 	EXPECT_TRUE(valid);
-	EXPECT_EQ(play.card, Joker);
-	EXPECT_EQ(play.get_play()->card, Ace);
-	EXPECT_EQ(play.get_play()->target_pieces.size(), 1);
-	EXPECT_EQ(play.get_play()->target_pieces.at(0).player, 0);
-	EXPECT_EQ(play.get_play()->target_pieces.at(0).rank, 3);
-	EXPECT_FALSE(play.get_play()->into_finish.at(0));
-	EXPECT_FALSE(play.get_play()->start_card);
-	EXPECT_TRUE(play.get_play()->ace_one);
-	EXPECT_FALSE(play.get_play()->four_backwards);
+	EXPECT_EQ(play.card, Ace);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 0);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 3);
+	EXPECT_FALSE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_TRUE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_TRUE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 }
 

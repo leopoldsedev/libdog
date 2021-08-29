@@ -32,7 +32,7 @@ class CardPlay {
 		bool ace_one = false;
 		bool four_backwards = false;
 
-		std::unique_ptr<CardPlay> joker_card;
+		bool is_joker = false;
 
 		CardPlay(int player, Card card) : CardPlay(player, card, false, false, false) {
 		}
@@ -46,16 +46,8 @@ class CardPlay {
 		CardPlay() {
 		}
 
-		CardPlay* get_play() {
-			CardPlay* play;
-
-			if (card == Joker) {
-				play = joker_card.get();
-			} else {
-				play = this;
-			}
-
-			return play;
+		CardPlay(int player, std::string notation_str) {
+			from_notation(player, notation_str);
 		}
 
 		int move_count() {
@@ -118,15 +110,19 @@ class CardPlay {
 		}
 
 		bool is_valid() {
+			if (card == None) {
+				return false;
+			}
+
+			if (card == Joker) {
+				return false;
+			}
+
 			if (start_card && !is_start_card(card)) {
 				return false;
 			}
 
 			if (target_pieces.size() != into_finish.size()) {
-				return false;
-			}
-
-			if (card == None) {
 				return false;
 			}
 
@@ -170,20 +166,6 @@ class CardPlay {
 				}
 			}
 
-			if (card == Joker) {
-				if (joker_card == nullptr) {
-					return false;
-				}
-
-				if (joker_card->card == Joker) {
-					return false;
-				}
-
-				if (!get_play()->is_valid()) {
-					return false;
-				}
-			}
-
 			return true;
 		}
 
@@ -203,29 +185,29 @@ class CardPlay {
 			card = card_from_string(card_str);
 			this->player = player;
 
-			bool match = false;
+			bool valid = false;
 
 			switch (card) {
 				case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
-					match = notation_parse_simple_forward(player, notation_str);
+					valid = notation_parse_simple_forward(player, notation_str);
 					break;
 				case Ace:
-					match = notation_parse_ace(player, notation_str);
+					valid = notation_parse_ace(player, notation_str);
 					break;
 				case Four:
-					match = notation_parse_four(player, notation_str);
+					valid = notation_parse_four(player, notation_str);
 					break;
 				case Seven:
-					match = notation_parse_seven(player, notation_str);
+					valid = notation_parse_seven(player, notation_str);
 					break;
 				case Jack:
-					match = notation_parse_jack(player, notation_str);
+					valid = notation_parse_jack(player, notation_str);
 					break;
 				case King:
-					match = notation_parse_king(player, notation_str);
+					valid = notation_parse_king(player, notation_str);
 					break;
 				case Joker:
-					match = notation_parse_joker(player, notation_str);
+					valid = notation_parse_joker(player, notation_str);
 					break;
 				case None:
 				default:
@@ -237,14 +219,14 @@ class CardPlay {
 			// larger than KENNEL_SIZE - 1)
 			for (PieceRef& ref : target_pieces) {
 				if (ref.rank < 0 || ref.player < 0 || ref.rank >= KENNEL_SIZE || ref.player >= PLAYER_COUNT) {
-					match = false;
+					valid = false;
 					break;
 				}
 			}
 
-			assert(!match || is_valid());
+			assert(!valid || is_valid());
 
-			return match;
+			return valid;
 		}
 
 		// notation_arg_str is the string without the card specifier (e.g. "#" if full notation string is "A#")
@@ -404,16 +386,15 @@ class CardPlay {
 		}
 
 		bool notation_parse_joker(int player, std::string notation_arg_str) {
-			joker_card = std::make_unique<CardPlay>();
-
 			// Look ahead to avoid double recursion
 			std::string joker_card_str = notation_arg_str.substr(0, 1);
-			Card joker_card_card = card_from_string(joker_card_str);
+			Card joker_card = card_from_string(joker_card_str);
 
 			bool match;
 
-			if (joker_card_card != Joker) {
-				match = joker_card->from_notation(player, notation_arg_str);
+			if (joker_card != Joker) {
+				match = from_notation(player, notation_arg_str);
+				is_joker = true;
 			} else {
 				match = false;
 			}

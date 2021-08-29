@@ -48,20 +48,20 @@ class DogGame {
 			}
 		}
 
-		bool play_card(CardPlay& card_play, bool check_turn, bool check_hand) {
-			if (!card_play.is_valid()) {
+		bool play_card(CardPlay play, bool check_turn, bool check_hand) {
+			if (!play.is_valid()) {
 				return false;
 			}
 
 			if (check_turn) {
-				if (card_play.player != player_turn) {
+				if (play.player != player_turn) {
 					// It needs to be the player's turn
 					return false;
 				}
 			}
 
 			if (check_hand) {
-				bool player_has_card = cards_state.check_player_has_card(card_play.player, card_play.card);
+				bool player_has_card = cards_state.check_player_has_card(play.player, play.card);
 
 				if (!player_has_card) {
 					// Card being played must be in hand
@@ -69,33 +69,31 @@ class DogGame {
 				}
 			}
 
-			CardPlay* play = card_play.get_play();
-
 			bool legal;
 
-			if (play->start_card) {
-				legal = start_piece(play->player);
+			if (play.start_card) {
+				legal = start_piece(play.player);
 			} else {
-				if (play->card == Seven) {
+				if (play.card == Seven) {
 					// TODO Check that the seven can only be split between *one* of the teammate's pieces and any number of the player's own pieces
-					bool legal = move_multiple_pieces(play->player, play->target_pieces, play->into_finish, play->counts, true);
+					bool legal = move_multiple_pieces(play.player, play.target_pieces, play.into_finish, play.counts, true);
 
 					if (legal) {
-						legal = move_multiple_pieces(play->player, play->target_pieces, play->into_finish, play->counts, false);
+						legal = move_multiple_pieces(play.player, play.target_pieces, play.into_finish, play.counts, false);
 						assert(legal);
 					}
-				} else if (play->card == Jack) {
-					int idx_player = board_state.ref_to_pos(play->target_pieces.at(0)).idx;
-					int idx_other = board_state.ref_to_pos(play->target_pieces.at(1)).idx;
+				} else if (play.card == Jack) {
+					int idx_player = board_state.ref_to_pos(play.target_pieces.at(0)).idx;
+					int idx_other = board_state.ref_to_pos(play.target_pieces.at(1)).idx;
 
-					legal = swap_pieces(play->player, idx_player, idx_other, false);
+					legal = swap_pieces(play.player, idx_player, idx_other, false);
 				} else {
-					int count = play->move_count();
+					int count = play.move_count();
 
-					bool into_finish = play->into_finish.at(0);
-					BoardPosition position = board_state.ref_to_pos(play->target_pieces.at(0));
+					bool into_finish = play.into_finish.at(0);
+					BoardPosition position = board_state.ref_to_pos(play.target_pieces.at(0));
 
-					legal = move_piece(play->player, position, count, into_finish, false, false);
+					legal = move_piece(play.player, position, count, into_finish, false, false);
 				}
 			}
 
@@ -103,7 +101,7 @@ class DogGame {
 				player_turn++;
 				player_turn %= PLAYER_COUNT;
 
-				cards_state.remove_card_from_hand(card_play.player, card_play.card);
+				cards_state.remove_card_from_hand(play.player, play.card);
 
 				if (cards_state.hands_empty()) {
 					// Round is done, new cards need to be handed out
@@ -273,8 +271,6 @@ class DogGame {
 			} else if (from_position.area == Path) {
 				int path_idx = from_position.idx;
 				int target_path_idx = positive_mod(path_idx + count, PATH_LENGTH);
-
-				int next_block_idx = board_state.next_blockade(path_idx, backwards);
 
 				bool blocked = board_state.check_block(path_idx, count);
 				if (blocked) {
