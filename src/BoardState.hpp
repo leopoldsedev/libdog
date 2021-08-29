@@ -145,17 +145,21 @@ class BoardState {
 			return piece;
 		}
 
-		void send_to_kennel(int player, int path_idx_start, int path_idx_end) {
-			if (path_idx_start > path_idx_end) {
-				path_idx_end += PATH_LENGTH;
-			}
+		void send_to_kennel(int from_path_idx, int count) {
+			bool backwards = (count < 0);
+			int step = backwards ? -1 : 1;
 
-			for (int i = path_idx_start; i < path_idx_end; i++) {
-				int i_mod = i % PATH_LENGTH;
+			for (int i = 0; i != count; i += step) {
+				int path_idx = positive_mod(from_path_idx + step + i, PATH_LENGTH);
 
-				PiecePtr& piece = get_piece(BoardPosition(i_mod));
+				if (path_idx == from_path_idx) {
+					continue;
+				}
 
-				if (piece != nullptr && piece->player != player) {
+				PiecePtr& piece = get_piece(BoardPosition(path_idx));
+
+				if (piece != nullptr) {
+					assert(!piece->blocking);
 					place_at_kennel(piece);
 				}
 			}

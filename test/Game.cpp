@@ -263,8 +263,7 @@ TEST(CardTest, SendToKennel) {
 	EXPECT_TRUE(game.play_card(CardPlay(1, "A'0"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(0, "50"), false, false));
 
-	EXPECT_NE(game.board_state.path.at(17), nullptr);
-	EXPECT_EQ(game.board_state.path.at(17)->player, 0);
+	EXPECT_PLAYER_AT(17, 0);
 	EXPECT_NE(game.board_state.kennels.at(1).at(0), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
@@ -276,8 +275,7 @@ TEST(CardTest, SendToKennel) {
 	EXPECT_TRUE(game.play_card(CardPlay(0, "20"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "T0"), false, false));
 
-	EXPECT_NE(game.board_state.path.at(22), nullptr);
-	EXPECT_EQ(game.board_state.path.at(22)->player, 1);
+	EXPECT_PLAYER_AT(22, 1);
 	EXPECT_NE(game.board_state.kennels.at(0).at(0), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(0).at(1), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(0).at(2), nullptr);
@@ -290,10 +288,8 @@ TEST(CardTest, SendToKennel) {
 	EXPECT_TRUE(game.play_card(CardPlay(0, "X50"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "T0-"), false, false));
 
-	EXPECT_NE(game.board_state.path.at(16), nullptr);
-	EXPECT_EQ(game.board_state.path.at(16)->player, 0);
-	EXPECT_NE(game.board_state.path.at(22), nullptr);
-	EXPECT_EQ(game.board_state.path.at(22)->player, 1);
+	EXPECT_PLAYER_AT(16, 0);
+	EXPECT_PLAYER_AT(22, 1);
 	EXPECT_EQ(game.board_state.kennels.at(1).at(0), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
@@ -302,8 +298,7 @@ TEST(CardTest, SendToKennel) {
 	EXPECT_TRUE(game.play_card(CardPlay(0, "K#"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "K#"), false, false));
 
-	EXPECT_NE(game.board_state.path.at(16), nullptr);
-	EXPECT_EQ(game.board_state.path.at(16)->player, 1);
+	EXPECT_PLAYER_AT(16, 1);
 	EXPECT_EQ(game.board_state.kennels.at(0).at(0), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(0).at(1), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(0).at(2), nullptr);
@@ -321,8 +316,6 @@ TEST(CardTest, Swap) {
 	EXPECT_TRUE(game.play_card(CardPlay(0, "A'0"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "A'0"), false, false));
 
-	PRINT_DBG(game);
-
 	EXPECT_PLAYER_AT(1, 0);
 	EXPECT_PLAYER_AT(17, 1);
 
@@ -333,6 +326,37 @@ TEST(CardTest, Swap) {
 }
 
 TEST(CardTest, Seven) {
+	// TODO Add cases where pieces included in the 7-move are sent back to kennel while executing the 7-move
+	DogGame game;
+
+	EXPECT_TRUE(game.play_card(CardPlay(0, "A#"), false, false));
+	EXPECT_TRUE(game.play_card(CardPlay(1, "A#"), false, false));
+	EXPECT_TRUE(game.play_card(CardPlay(0, "Q0"), false, false));
+	EXPECT_TRUE(game.play_card(CardPlay(1, "A'0"), false, false));
+	PRINT_DBG(game);
+	EXPECT_TRUE(game.play_card(CardPlay(0, "707"), false, false));
+
+	PRINT_DBG(game);
+
+	EXPECT_PLAYER_AT(19, 0);
+	EXPECT_EQ(game.board_state.path.at(17), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(0), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
+}
+
+TEST(FullGameTest, CardExchange) {
+	GTEST_SKIP();
+	// TODO
+}
+
+TEST(FullGameTest, Turns) {
+	GTEST_SKIP();
+	// TODO
+}
+
+TEST(FullGameTest, HandCheck) {
 	GTEST_SKIP();
 	// TODO
 }

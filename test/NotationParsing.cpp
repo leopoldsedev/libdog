@@ -212,6 +212,61 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.four_backwards);
 	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
+}
+
+TEST(NotationParsing, AvoidFinish) {
+	valid = play.from_notation(1, "T0-");
+	EXPECT_TRUE(valid);
+	EXPECT_EQ(play.card, Ten);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 1);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 0);
+	EXPECT_FALSE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
+	EXPECT_TRUE(play.is_valid());
+
+	valid = play.from_notation(1, "A0-");
+	EXPECT_TRUE(valid);
+	EXPECT_EQ(play.card, Ace);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 1);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 0);
+	EXPECT_FALSE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
+	EXPECT_TRUE(play.is_valid());
+
+	valid = play.from_notation(1, "40-");
+	EXPECT_TRUE(valid);
+	EXPECT_EQ(play.card, Four);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 1);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 0);
+	EXPECT_FALSE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
+	EXPECT_TRUE(play.is_valid());
+
+	valid = play.from_notation(1, "717-");
+	EXPECT_TRUE(valid);
+	EXPECT_EQ(play.card, Seven);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 1);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 1);
+	EXPECT_EQ(play.counts.at(0), 7);
+	EXPECT_FALSE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_FALSE(play.is_joker);
+	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K3-");
 	EXPECT_TRUE(valid);
@@ -226,18 +281,17 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_FALSE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 
-	// TODO Add case for into_finish for all card types
-	valid = play.from_notation(1, "T0-");
+	valid = play.from_notation(0, "XK3-");
 	EXPECT_TRUE(valid);
-	EXPECT_EQ(play.card, Ten);
+	EXPECT_EQ(play.card, King);
 	EXPECT_EQ(play.target_pieces.size(), 1);
-	EXPECT_EQ(play.target_pieces.at(0).player, 1);
-	EXPECT_EQ(play.target_pieces.at(0).rank, 0);
+	EXPECT_EQ(play.target_pieces.at(0).player, 0);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 3);
 	EXPECT_FALSE(play.into_finish.at(0));
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_FALSE(play.four_backwards);
-	EXPECT_FALSE(play.is_joker);
+	EXPECT_TRUE(play.is_joker);
 	EXPECT_TRUE(play.is_valid());
 }
 

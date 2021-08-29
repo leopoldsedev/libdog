@@ -167,6 +167,7 @@ class CardPlay {
 		}
 
 		// TODO Move notation into its own parser class
+		// TODO Extend notation so that ommitting the digit for forward moving cards implies piece rank of 0
 		bool from_notation(int player, std::string notation_str) {
 			// Reset all fields
 			// TODO I feel like this is bad practice

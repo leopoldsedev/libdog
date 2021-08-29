@@ -75,8 +75,7 @@ class DogGame {
 				legal = start_piece(play.player);
 			} else {
 				if (play.card == Seven) {
-					// TODO Check that the seven can only be split between *one* of the teammate's pieces and any number of the player's own pieces
-					bool legal = move_multiple_pieces(play.player, play.target_pieces, play.into_finish, play.counts, true);
+					legal = move_multiple_pieces(play.player, play.target_pieces, play.into_finish, play.counts, true);
 
 					if (legal) {
 						legal = move_multiple_pieces(play.player, play.target_pieces, play.into_finish, play.counts, false);
@@ -136,6 +135,7 @@ class DogGame {
 		bool move_piece(int player, BoardPosition position, int count, bool into_finish, bool legal_check, bool remove_all_on_way) {
 			BoardPosition position_result;
 			PiecePtr& piece = board_state.get_piece(position);
+			int count_on_path = 0;
 
 			if (piece == nullptr) {
 				// Piece must exist at given position
@@ -168,13 +168,17 @@ class DogGame {
 				*/
 				BoardPosition path_position_result;
 				BoardPosition finish_position_result;
-				bool path_free = try_continue_on_path(player, position, count, piece->blocking, path_position_result);
-				bool finish_free = try_enter_finish(player, position, count, piece->blocking, finish_position_result);
+				int path_count_on_path;
+				int finish_count_on_path;
+				bool path_free = try_continue_on_path(player, position, count, piece->blocking, path_position_result, path_count_on_path);
+				bool finish_free = try_enter_finish(player, position, count, piece->blocking, finish_position_result, finish_count_on_path);
 
 				if (into_finish && finish_free) {
 					position_result = finish_position_result;
+					count_on_path = finish_count_on_path;
 				} else if (path_free) {
 					position_result = path_position_result;
+					count_on_path = path_count_on_path;
 				} else {
 					return false;
 				}
@@ -188,8 +192,10 @@ class DogGame {
 			if (!legal_check) {
 				// Change board state
 				if (remove_all_on_way) {
-					// TODO
-					assert(false);
+					assert(count_on_path > 0);
+					if (position.area == Path) {
+						board_state.send_to_kennel(position.idx, count_on_path);
+					}
 				} else {
 					PiecePtr& piece_to_send_back = board_state.get_piece(position_result);
 					if (piece_to_send_back != nullptr) {
@@ -203,10 +209,11 @@ class DogGame {
 			return true;
 		}
 
-		bool try_enter_finish(int player, BoardPosition position, int count, bool piece_blocking, BoardPosition& position_result) {
+		bool try_enter_finish(int player, BoardPosition position, int count, bool piece_blocking, BoardPosition& position_result, int& count_on_path_result) {
 			assert(position.area == Path);
 
 			int steps_on_path = BoardState::calc_steps_on_path(player, position, piece_blocking, count, true);
+			count_on_path_result = steps_on_path;
 			int steps_into_finish = count - steps_on_path;
 
 			if (steps_on_path != 0) {
@@ -234,10 +241,11 @@ class DogGame {
 			return true;
 		}
 
-		bool try_continue_on_path(int player, BoardPosition position, int count, bool piece_blocking, BoardPosition& position_result) {
+		bool try_continue_on_path(int player, BoardPosition position, int count, bool piece_blocking, BoardPosition& position_result, int& count_on_path_result) {
 			assert(position.area == Path);
 
 			int steps_on_path = BoardState::calc_steps_on_path(player, position, piece_blocking, count, false);
+			count_on_path_result = steps_on_path;
 
 			bool legal = check_move(position, steps_on_path, position_result);
 			return legal;
@@ -296,7 +304,8 @@ class DogGame {
 				BoardPosition position = board_state.ref_to_pos(target_pieces.at(i));
 				int count = counts.at(i);
 
-				legal = move_piece(player, position, count, into_finish, legal_check, false);
+				// TODO Somehow pass the list of remaining pieces to check that they would not be moved to kennel by this move (to avoid pieces that are in the target_pieces list being moved to kennel before they are being moved)
+				legal = move_piece(player, position, count, into_finish, legal_check, true);
 
 				if (!legal) {
 					break;
