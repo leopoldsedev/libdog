@@ -23,6 +23,7 @@ typedef std::unique_ptr<Piece> PiecePtr;
 
 class BoardState {
 	public:
+		// TODO Think about a way to properly abstract away the fact that after the last path index the first path index begins again
 		std::array<PiecePtr, PATH_LENGTH> path;
 		std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
 		std::array<std::array<PiecePtr, KENNEL_SIZE>, PLAYER_COUNT> kennels;
@@ -44,7 +45,7 @@ class BoardState {
 
 		BoardPosition ref_to_pos(PieceRef piece_ref) {
 			int player = piece_ref.player;
-			int rank = piece_ref.player;
+			int rank = piece_ref.rank;
 
 			int piece_idx = 0;
 
@@ -160,16 +161,17 @@ class BoardState {
 
 		void place_at_kennel(PiecePtr& piece) {
 			assert(piece != nullptr);
+			assert(!piece->blocking);
 
 			auto& kennel = kennels.at(piece->player);
 
-			for (std::size_t i = 0; i < kennel.size(); i++) {
+			for (std::size_t i = kennel.size() - 1; i >= 0; i--) {
 				if (kennel.at(i) == nullptr) {
-					kennel.at(i) = std::move(piece);
-
 					piece->area = Kennel;
 					piece->blocking = true;
 					piece->position = i;
+
+					kennel.at(i) = std::move(piece);
 
 					return;
 				}
@@ -262,6 +264,28 @@ class BoardState {
 			return section_idices;
 		}
 
+		bool check_block(int from_path_idx, int count) {
+			bool backwards = (count < 0);
+			int step = backwards ? -1 : 1;
+
+			// TODO Loop can be stopped early if i < or > +-PATH_LENGTH, it could also be made faster by going in increments of PATH_SECTION_LENGTH
+			for (int i = 0; i != count; i += step) {
+				int path_idx = positive_mod(from_path_idx + step + i, PATH_LENGTH);
+
+				if (path_idx == from_path_idx) {
+					continue;
+				}
+
+				PiecePtr& piece = get_piece(BoardPosition(path_idx));
+
+				if (piece != nullptr && piece->blocking) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		int next_blockade(int from_path_idx, bool backwards) {
 			int result = -1;
 
@@ -312,6 +336,7 @@ class BoardState {
 
 			int steps_on_path;
 
+			// TODO Checking backwards here enforces a game rule and thus does not belong into this class
 			if (into_finish && !backwards) {
 				int steps_to_start = calc_steps_to_start(player, position.idx);
 

@@ -187,8 +187,10 @@ class CardPlay {
 			return true;
 		}
 
+		// TODO Move notation into its own parser class
 		bool from_notation(int player, std::string notation_str) {
 			// Reset all fields
+			// TODO I feel like this is bad practice
 			*this = CardPlay();
 
 			// Remove all whitespace from string
@@ -199,6 +201,8 @@ class CardPlay {
 			notation_str.erase(0, 1);
 
 			card = card_from_string(card_str);
+			this->player = player;
+
 			bool match = false;
 
 			switch (card) {
@@ -251,8 +255,8 @@ class CardPlay {
 			bool match = std::regex_match(notation_arg_str, matches, regex);
 
 			if (match) {
-				int rank = std::stoi(matches[0]);
-				bool avoid_finish = (matches[1] == "-");
+				int rank = std::stoi(matches[1]);
+				bool avoid_finish = (matches[2] == "-");
 
 				PieceRef piece_ref(player, rank);
 				target_pieces.push_back(piece_ref);

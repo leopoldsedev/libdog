@@ -11,12 +11,14 @@ bool valid;
 TEST(NotationParsing, StartCard) {
 	valid = play.from_notation(0, "A#");
 	EXPECT_TRUE(valid);
+	EXPECT_EQ(play.player, 0);
 	EXPECT_EQ(play.card, Ace);
 	EXPECT_TRUE(play.start_card);
 	EXPECT_FALSE(play.ace_one);
 	EXPECT_TRUE(play.is_valid());
 
 	valid = play.from_notation(0, "K#");
+	EXPECT_EQ(play.player, 0);
 	EXPECT_TRUE(valid);
 	EXPECT_EQ(play.card, King);
 	EXPECT_TRUE(play.start_card);
@@ -198,6 +200,19 @@ TEST(NotationParsing, ForwardCards) {
 	EXPECT_EQ(play.target_pieces.size(), 1);
 	EXPECT_EQ(play.target_pieces.at(0).player, 0);
 	EXPECT_EQ(play.target_pieces.at(0).rank, 3);
+	EXPECT_FALSE(play.into_finish.at(0));
+	EXPECT_FALSE(play.start_card);
+	EXPECT_FALSE(play.ace_one);
+	EXPECT_FALSE(play.four_backwards);
+	EXPECT_TRUE(play.is_valid());
+
+	// TODO Add case for into_finish for all card types
+	valid = play.from_notation(1, "T0-");
+	EXPECT_TRUE(valid);
+	EXPECT_EQ(play.card, Ten);
+	EXPECT_EQ(play.target_pieces.size(), 1);
+	EXPECT_EQ(play.target_pieces.at(0).player, 1);
+	EXPECT_EQ(play.target_pieces.at(0).rank, 0);
 	EXPECT_FALSE(play.into_finish.at(0));
 	EXPECT_FALSE(play.start_card);
 	EXPECT_FALSE(play.ace_one);

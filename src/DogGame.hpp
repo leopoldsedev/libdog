@@ -13,6 +13,9 @@
 #include "Debug.hpp"
 #include "Util.hpp"
 
+// TODO Rename `backwards` to `clockwise`
+// TODO Correctly use different ways of specifying pieces/positions (BoardPosition, PieceRef, PiecePtr, path_idx, finish_idx) depending on the minimum needed for any given function
+
 
 class DogGame {
 	public:
@@ -152,27 +155,31 @@ class DogGame {
 			}
 
 			if (position.area == Path) {
-				int steps_on_path = BoardState::calc_steps_on_path(player, position, piece->blocking, count, into_finish);
-				int steps_into_finish = count - steps_on_path;
+				// TODO Add test for each of these cases
+				/* Possibilities
+				   into_finish   Finish   Path      outcome
+				   ----------------------------------------
+				   true          free     free      enter finish
+				   true          free     blocked   enter finish
 
-				if (steps_on_path != 0) {
-					bool legal = check_move(position, steps_on_path, position_result);
-					if (!legal) return false;
-				}
+				   true          blocked  free      continue on path
+				   false         free     free      continue on path
+				   false         blocked  free      continue on path
+				   true          blocked  blocked   illegal
+				   false         free     blocked   illegal
+				   false         blocked  blocked   illegal
+				*/
+				BoardPosition path_position_result;
+				BoardPosition finish_position_result;
+				bool path_free = try_continue_on_path(player, position, count, piece->blocking, path_position_result);
+				bool finish_free = try_enter_finish(player, position, count, piece->blocking, finish_position_result);
 
-				if (steps_into_finish > 0) {
-					// Piece transitions from path area to finish area
-					bool backwards = count < 0;
-					assert(!backwards);
-
-					if (steps_on_path == 0 && piece->blocking) {
-						// Piece has to touch start twice
-						return false;
-					}
-
-					// In this check position index "-1" in the finish represents the position right before the finish
-					bool legal = check_move(BoardPosition(Finish, player, -1), steps_into_finish, position_result);
-					if (!legal) return false;
+				if (into_finish && finish_free) {
+					position_result = finish_position_result;
+				} else if (path_free) {
+					position_result = path_position_result;
+				} else {
+					return false;
 				}
 			} else {
 				assert(position.area == Finish);
@@ -197,6 +204,46 @@ class DogGame {
 			}
 
 			return true;
+		}
+
+		bool try_enter_finish(int player, BoardPosition position, int count, bool piece_blocking, BoardPosition& position_result) {
+			assert(position.area == Path);
+
+			int steps_on_path = BoardState::calc_steps_on_path(player, position, piece_blocking, count, true);
+			int steps_into_finish = count - steps_on_path;
+
+			if (steps_on_path != 0) {
+				bool legal = check_move(position, steps_on_path, position_result);
+				if (!legal) return false;
+			}
+
+			if (steps_into_finish > 0) {
+				// Piece transitions from path area to finish area
+				bool backwards = count < 0;
+				assert(!backwards);
+
+				// TODO This assert is a guess, remove following if if it is valid. reason: calc_steps_on_path() call already handles this case.
+				assert(!(steps_on_path == 0 && piece_blocking));
+				if (steps_on_path == 0 && piece_blocking) {
+					// Piece has to touch start twice
+					return false;
+				}
+
+				// In this check position index "-1" in the finish represents the position right before the finish
+				bool legal = check_move(BoardPosition(Finish, player, -1), steps_into_finish, position_result);
+				if (!legal) return false;
+			}
+
+			return true;
+		}
+
+		bool try_continue_on_path(int player, BoardPosition position, int count, bool piece_blocking, BoardPosition& position_result) {
+			assert(position.area == Path);
+
+			int steps_on_path = BoardState::calc_steps_on_path(player, position, piece_blocking, count, false);
+
+			bool legal = check_move(position, steps_on_path, position_result);
+			return legal;
 		}
 
 		// This function assumes no area crossing (piece stays in the area that it was in)
@@ -229,28 +276,7 @@ class DogGame {
 
 				int next_block_idx = board_state.next_blockade(path_idx, backwards);
 
-				bool blocked;
-				if (next_block_idx == -1) {
-					blocked = false;
-				} else {
-					// TODO Can this be simplified by implementing a function to check if there is a blockade in a given range (similar to the send_to_kennel() function)?
-					if (backwards) {
-						if (next_block_idx <= target_path_idx) {
-							blocked = target_path_idx <= next_block_idx;
-						} else {
-							blocked = (target_path_idx + PATH_LENGTH) <= next_block_idx;
-						}
-					} else {
-						blocked = target_path_idx >= next_block_idx;
-
-						if (next_block_idx >= target_path_idx) {
-							blocked = target_path_idx >= next_block_idx;
-						} else {
-							blocked = (target_path_idx - PATH_LENGTH) <= next_block_idx;
-						}
-					}
-				}
-
+				bool blocked = board_state.check_block(path_idx, count);
 				if (blocked) {
 					// Piece cannot leapfrog another piece that is blocking
 					return false;

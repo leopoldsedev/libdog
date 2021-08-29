@@ -11,6 +11,7 @@
 
 
 // TODO Currently the deck assumes that it is only reshuffled after all cards that were drawn have been played. If this assumption is violated it may happen that cards are given out again even though they have not been played, yet.
+// TODO Track suites as well to make library usable for full game interfaces
 class Deck {
 	std::vector<Card> cards = {};
 	std::vector<Card> drawn = {};

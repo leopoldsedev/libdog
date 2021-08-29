@@ -13,7 +13,7 @@ void check_state(DogGame& game) {
 			if (piece != nullptr) {
 				EXPECT_EQ(piece->player, player);
 				EXPECT_EQ(piece->area, Kennel);
-//                EXPECT_EQ(piece->position, j);
+//                EXPECT_EQ(piece->position, j); // TODO
 				EXPECT_EQ(piece->blocking, true);
 			}
 		}
@@ -23,7 +23,7 @@ void check_state(DogGame& game) {
 		PiecePtr& piece = game.board_state.path.at(i);
 
 		if (piece != nullptr) {
-//            EXPECT_EQ(piece->position, i);
+			EXPECT_EQ(piece->position, i);
 			EXPECT_EQ(piece->area, Path);
 
 			if (i % PATH_SECTION_LENGTH != 0) {
@@ -39,7 +39,7 @@ void check_state(DogGame& game) {
 			if (piece != nullptr) {
 				EXPECT_EQ(piece->player, player);
 				EXPECT_EQ(piece->area, Finish);
-//                EXPECT_EQ(piece->position, j);
+				EXPECT_EQ(piece->position, j);
 				EXPECT_EQ(piece->blocking, false);
 			}
 		}
@@ -312,16 +312,125 @@ TEST(CardTest, BackwardStartFinish) {
 	EXPECT_NE(game.board_state.finishes.at(0).at(3), nullptr);
 }
 
+TEST(CardTest, NoFinishFromStart) {
+	DogGame game;
+	CardPlay play;
+
+	play.from_notation(0, "A#");
+	EXPECT_TRUE(game.play_card(play, false, false));
+
+	play.from_notation(0, "40");
+	EXPECT_TRUE(game.play_card(play, false, false));
+
+	EXPECT_NE(game.board_state.path.at(4), nullptr);
+}
+
 TEST(CardTest, SendToKennel) {
-	GTEST_SKIP();
-	// TODO
 	DogGame game;
 	bool legal;
+	CardPlay play;
 
-	CardPlay play = CardPlay(0, Ace, true);
-
+	play.from_notation(0, "A#");
 	legal = game.play_card(play, false, false);
 	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "A#");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(0, "Q0");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "A'0");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(0, "50");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	EXPECT_NE(game.board_state.path.at(17), nullptr);
+	EXPECT_EQ(game.board_state.path.at(17)->player, 0);
+	EXPECT_NE(game.board_state.kennels.at(1).at(0), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
+
+	play.from_notation(1, "K#");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(0, "30");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "4'0");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(0, "20");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "T0");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	EXPECT_NE(game.board_state.path.at(22), nullptr);
+	EXPECT_EQ(game.board_state.path.at(22)->player, 1);
+	EXPECT_NE(game.board_state.kennels.at(0).at(0), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(0).at(1), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(0).at(2), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(0).at(3), nullptr);
+
+	play.from_notation(0, "XA#");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "K#");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(0, "XA0");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "4'1");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(0, "X50");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "T0-");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	EXPECT_NE(game.board_state.path.at(16), nullptr);
+	EXPECT_EQ(game.board_state.path.at(16)->player, 0);
+	EXPECT_NE(game.board_state.path.at(22), nullptr);
+	EXPECT_EQ(game.board_state.path.at(22)->player, 1);
+	EXPECT_EQ(game.board_state.kennels.at(1).at(0), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
+
+	play.from_notation(0, "K#");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	play.from_notation(1, "K#");
+	legal = game.play_card(play, false, false);
+	EXPECT_TRUE(legal);
+
+	EXPECT_NE(game.board_state.path.at(16), nullptr);
+	EXPECT_EQ(game.board_state.path.at(16)->player, 1);
+	EXPECT_EQ(game.board_state.kennels.at(0).at(0), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(0).at(1), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(0).at(2), nullptr);
+	EXPECT_NE(game.board_state.kennels.at(0).at(3), nullptr);
 }
 
 TEST(CardTest, Swap) {
