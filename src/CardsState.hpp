@@ -5,9 +5,7 @@
 
 #include "Deck.hpp"
 #include "Hand.hpp"
-
-// TODO This macro exists twice
-#define PLAYER_COUNT (4)
+#include "Constants.hpp"
 
 
 class CardsState {

@@ -13,7 +13,7 @@ void check_state(DogGame& game) {
 			if (piece != nullptr) {
 				EXPECT_EQ(piece->player, player);
 				EXPECT_EQ(piece->area, Kennel);
-//                EXPECT_EQ(piece->position, j); // TODO
+				EXPECT_EQ(piece->position, j);
 				EXPECT_EQ(piece->blocking, true);
 			}
 		}
@@ -242,7 +242,6 @@ TEST(CardTest, BackwardStartFinish) {
 
 TEST(CardTest, NoFinishFromStart) {
 	DogGame game;
-	CardPlay play;
 
 	EXPECT_TRUE(game.play_card(CardPlay(0, "A#"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(0, "40"), false, false));
@@ -252,7 +251,6 @@ TEST(CardTest, NoFinishFromStart) {
 
 TEST(CardTest, SendToKennel) {
 	DogGame game;
-	CardPlay play;
 
 	EXPECT_TRUE(game.play_card(CardPlay(0, "A#"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "A#"), false, false));

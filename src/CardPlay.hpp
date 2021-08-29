@@ -10,10 +10,7 @@
 #include "PieceRef.hpp"
 #include "BoardPosition.hpp"
 #include "Debug.hpp"
-
-// TODO Duplicate definitions
-#define KENNEL_SIZE (4)
-#define PLAYER_COUNT (4)
+#include "Constants.hpp"
 
 #define GET_TEAM_PLAYER_IDX(player_idx) (((player_idx) + 2) % PLAYER_COUNT)
 

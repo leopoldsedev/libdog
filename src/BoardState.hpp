@@ -10,13 +10,7 @@
 #include "BoardPosition.hpp"
 #include "Util.hpp"
 #include "Debug.hpp"
-
-// TODO Put these into their own files (Constants.hpp) (then check usages and change/clean up includes accordingly)
-#define PLAYER_COUNT (4)
-#define PATH_LENGTH (64)
-#define PATH_SECTION_LENGTH (PATH_LENGTH / PLAYER_COUNT)
-#define FINISH_LENGTH (4)
-#define KENNEL_SIZE (4)
+#include "Constants.hpp"
 
 
 typedef std::unique_ptr<Piece> PiecePtr;
@@ -33,13 +27,21 @@ class BoardState {
 		}
 
 		void reset() {
-			// TODO Reset of finish and path
 			// TODO Maybe do not replace all references and instead reset those that already exist to not introduce inconsistencies from returned references to the old pointers
 			for (std::size_t player = 0; player != kennels.size(); player++) {
 				for (std::size_t j = 0; j != kennels.size(); j++) {
-					// TODO Is a delete/release needed somewhere?
-					kennels.at(player).at(j) = PiecePtr(new Piece(player));
+					kennels.at(player).at(j) = std::make_unique<Piece>(player, j, Kennel, true);
 				}
+			}
+
+			for (std::size_t player = 0; player != finishes.size(); player++) {
+				for (std::size_t j = 0; j != finishes.size(); j++) {
+					finishes.at(player).at(j) = nullptr;
+				}
+			}
+
+			for (std::size_t i = 0; i != path.size(); i++) {
+				path.at(i) = nullptr;
 			}
 		}
 
@@ -187,7 +189,6 @@ class BoardState {
 			piece->position = position.idx;
 			piece->blocking = false;
 			target = std::move(piece);
-			// TODO Is here a memory leak if there was already a piece at the target position?
 		}
 
 		void swap_pieces(PiecePtr& piece1, PiecePtr& piece2) {

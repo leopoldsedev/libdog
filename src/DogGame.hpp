@@ -159,12 +159,11 @@ class DogGame {
 				   ----------------------------------------
 				   true          free     free      enter finish
 				   true          free     blocked   enter finish
-
 				   true          blocked  free      continue on path
-				   false         free     free      continue on path
-				   false         blocked  free      continue on path
 				   true          blocked  blocked   illegal
+				   false         free     free      continue on path
 				   false         free     blocked   illegal
+				   false         blocked  free      continue on path
 				   false         blocked  blocked   illegal
 				*/
 				BoardPosition path_position_result;
