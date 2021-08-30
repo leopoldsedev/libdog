@@ -326,17 +326,13 @@ TEST(CardTest, Swap) {
 }
 
 TEST(CardTest, Seven) {
-	// TODO Add cases where pieces included in the 7-move are sent back to kennel while executing the 7-move
 	DogGame game;
 
 	EXPECT_TRUE(game.play_card(CardPlay(0, "A#"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "A#"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(0, "Q0"), false, false));
 	EXPECT_TRUE(game.play_card(CardPlay(1, "A'0"), false, false));
-	PRINT_DBG(game);
 	EXPECT_TRUE(game.play_card(CardPlay(0, "707"), false, false));
-
-	PRINT_DBG(game);
 
 	EXPECT_PLAYER_AT(19, 0);
 	EXPECT_EQ(game.board_state.path.at(17), nullptr);
@@ -344,6 +340,67 @@ TEST(CardTest, Seven) {
 	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
+
+	game.reset();
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 0)), BoardPosition(4));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 1)), BoardPosition(6));
+	// TODO Fix this test case
+//    EXPECT_FALSE(game.play_card(CardPlay(0, "71304"), false, false));
+}
+
+TEST(CardTest, IntoFinishFlag) {
+	/* Possibilities
+	   into_finish   Finish   Path      outcome
+	   ----------------------------------------
+	   true          free     free      enter finish
+	   true          free     blocked   enter finish      <-- not possible in game
+	   true          blocked  free      continue on path
+	   true          blocked  blocked   illegal
+	   false         free     free      continue on path
+	   false         free     blocked   illegal           <-- not possible in game
+	   false         blocked  free      continue on path
+	   false         blocked  blocked   illegal
+	*/
+
+	DogGame game;
+
+	int player = 0;
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "80"), false, false));
+	EXPECT_NE(game.board_state.get_piece(BoardPosition(Finish, player, 3)), nullptr);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "80-"), false, false));
+	EXPECT_PLAYER_AT(4, 0);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "30"), false, false));
+	EXPECT_PLAYER_AT(63, 0);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "30-"), false, false));
+	EXPECT_PLAYER_AT(63, 0);
+
+	EXPECT_TRUE(game.play_card(CardPlay(player, "A#"), false, false));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
+	EXPECT_FALSE(game.play_card(CardPlay(player, "T0"), false, false));
+	EXPECT_FALSE(game.play_card(CardPlay(player, "T0-"), false, false));
+	EXPECT_FALSE(game.play_card(CardPlay(player, "80-"), false, false));
+	EXPECT_FALSE(game.play_card(CardPlay(player, "80"), false, false));
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(Finish, player, 1));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 1)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "81"), false, false));
+	EXPECT_PLAYER_AT(4, 0);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 1)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "81-"), false, false));
+	EXPECT_PLAYER_AT(4, 0);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 1)), BoardPosition(60));
+	EXPECT_TRUE(game.play_card(CardPlay(player, "51"), false, false));
+	EXPECT_NE(game.board_state.get_piece(BoardPosition(Finish, player, 0)), nullptr);
 }
 
 TEST(FullGameTest, CardExchange) {
@@ -364,6 +421,4 @@ TEST(FullGameTest, HandCheck) {
 TEST(FullGameTest, One) {
 	GTEST_SKIP();
 	DogGame game;
-
-	PRINT_DBG(game);
 }

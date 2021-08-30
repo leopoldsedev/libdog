@@ -153,16 +153,15 @@ class DogGame {
 			}
 
 			if (position.area == Path) {
-				// TODO Add test for each of these cases
 				/* Possibilities
 				   into_finish   Finish   Path      outcome
 				   ----------------------------------------
 				   true          free     free      enter finish
-				   true          free     blocked   enter finish
+				   true          free     blocked   enter finish      <-- not possible in game
 				   true          blocked  free      continue on path
 				   true          blocked  blocked   illegal
 				   false         free     free      continue on path
-				   false         free     blocked   illegal
+				   false         free     blocked   illegal           <-- not possible in game
 				   false         blocked  free      continue on path
 				   false         blocked  blocked   illegal
 				*/

@@ -45,6 +45,11 @@ class BoardState {
 			}
 		}
 
+		PiecePtr& ref_to_piece(PieceRef piece_ref) {
+			BoardPosition position = ref_to_pos(piece_ref);
+			return get_piece(position);
+		}
+
 		BoardPosition ref_to_pos(PieceRef piece_ref) {
 			int player = piece_ref.player;
 			int rank = piece_ref.rank;
