@@ -417,13 +417,13 @@ TEST(NotationParsing, Jack) {
 	EXPECT_EQ(play.target_pieces.at(1).rank, 0);
 	EXPECT_TRUE(play.is_valid());
 
-	valid = play.from_notation(0, "J303");
+	valid = play.from_notation(0, "J313");
 	EXPECT_TRUE(valid);
 	EXPECT_EQ(play.card, Jack);
 	EXPECT_EQ(play.target_pieces.size(), 2);
 	EXPECT_EQ(play.target_pieces.at(0).player, 0);
 	EXPECT_EQ(play.target_pieces.at(0).rank, 3);
-	EXPECT_EQ(play.target_pieces.at(1).player, 0);
+	EXPECT_EQ(play.target_pieces.at(1).player, 1);
 	EXPECT_EQ(play.target_pieces.at(1).rank, 3);
 	EXPECT_TRUE(play.is_valid());
 }
@@ -482,6 +482,12 @@ TEST(NotationParsing, Invalid) {
 	valid = play.from_notation(0, "   ");
 	EXPECT_FALSE(valid);
 
+	valid = play.from_notation(0, "f2");
+	EXPECT_FALSE(valid);
+
+	valid = play.from_notation(0, "a#");
+	EXPECT_FALSE(valid);
+
 	valid = play.from_notation(0, "2#");
 	EXPECT_FALSE(valid);
 
@@ -525,6 +531,9 @@ TEST(NotationParsing, Invalid) {
 	EXPECT_FALSE(valid);
 
 	valid = play.from_notation(0, "J004");
+	EXPECT_FALSE(valid);
+
+	valid = play.from_notation(0, "J303");
 	EXPECT_FALSE(valid);
 
 	valid = play.from_notation(0, "J'011");

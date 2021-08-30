@@ -17,8 +17,7 @@ void check_state(DogGame& game) {
 
 			if (piece != nullptr) {
 				EXPECT_EQ(piece->player, player);
-				EXPECT_EQ(piece->area, Kennel);
-				EXPECT_EQ(piece->position, j);
+				EXPECT_EQ(piece->position, BoardPosition(Kennel, player, j));
 				EXPECT_EQ(piece->blocking, true);
 			}
 		}
@@ -28,8 +27,7 @@ void check_state(DogGame& game) {
 		PiecePtr& piece = game.board_state.path.at(i);
 
 		if (piece != nullptr) {
-			EXPECT_EQ(piece->position, i);
-			EXPECT_EQ(piece->area, Path);
+			EXPECT_EQ(piece->position, BoardPosition(i));
 
 			if (i % PATH_SECTION_LENGTH != 0) {
 				EXPECT_EQ(piece->blocking, false);
@@ -43,8 +41,7 @@ void check_state(DogGame& game) {
 
 			if (piece != nullptr) {
 				EXPECT_EQ(piece->player, player);
-				EXPECT_EQ(piece->area, Finish);
-				EXPECT_EQ(piece->position, j);
+				EXPECT_EQ(piece->position, BoardPosition(Finish, player, j));
 				EXPECT_EQ(piece->blocking, false);
 			}
 		}
@@ -97,7 +94,7 @@ TEST(BasicTest, MovePiece) {
 	for (int i = 0; i < 2 * PATH_LENGTH; i++) {
 		bool legal;
 
-		legal = game.move_piece(0, BoardPosition(i % PATH_LENGTH), 1, false, false, false);
+		legal = game.move_piece(game.board_state.get_piece(BoardPosition(i % PATH_LENGTH)), 1, false, false, false);
 
 		EXPECT_TRUE(legal);
 
@@ -114,22 +111,22 @@ TEST(BasicTest, Blockades) {
 
 	bool legal;
 
-	legal = game.move_piece(0, BoardPosition(0), PATH_SECTION_LENGTH, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(0)), PATH_SECTION_LENGTH, false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(PATH_SECTION_LENGTH), -PATH_SECTION_LENGTH, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(PATH_SECTION_LENGTH)), -PATH_SECTION_LENGTH, false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(0), -PATH_SECTION_LENGTH, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(0)), -PATH_SECTION_LENGTH, false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(PATH_LENGTH - PATH_SECTION_LENGTH), PATH_SECTION_LENGTH, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(PATH_LENGTH - PATH_SECTION_LENGTH)), PATH_SECTION_LENGTH, false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
@@ -138,42 +135,42 @@ TEST(BasicTest, Blockades) {
 	game.start_piece(2);
 	game.start_piece(3);
 
-	legal = game.move_piece(0, BoardPosition(0), PATH_SECTION_LENGTH, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(0)), PATH_SECTION_LENGTH, false, false, false);
 	EXPECT_FALSE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(0), -PATH_SECTION_LENGTH, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(0)), -PATH_SECTION_LENGTH, false, false, false);
 	EXPECT_FALSE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(0), PATH_SECTION_LENGTH - 1, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(0)), PATH_SECTION_LENGTH - 1, false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(PATH_SECTION_LENGTH - 1), 1, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(PATH_SECTION_LENGTH - 1)), 1, false, false, false);
 	EXPECT_FALSE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(PATH_SECTION_LENGTH - 1), -(PATH_SECTION_LENGTH - 1), false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(PATH_SECTION_LENGTH - 1)), -(PATH_SECTION_LENGTH - 1), false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(0), -(PATH_SECTION_LENGTH - 1), false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(0)), -(PATH_SECTION_LENGTH - 1), false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1)), -1, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1))), -1, false, false, false);
 	EXPECT_FALSE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
 
-	legal = game.move_piece(0, BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1)), PATH_SECTION_LENGTH - 1, false, false, false);
+	legal = game.move_piece(game.board_state.get_piece(BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1))), PATH_SECTION_LENGTH - 1, false, false, false);
 	EXPECT_TRUE(legal);
 	check_state(game);
 	EXPECT_NE(game.board_state.path.at(0), nullptr);

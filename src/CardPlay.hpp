@@ -132,8 +132,18 @@ class CardPlay {
 					return false;
 				}
 
-				if (card == Jack && target_pieces.size() != 2) {
-					return false;
+				if (card == Jack) {
+					if (target_pieces.size() != 2) {
+						return false;
+					}
+
+					if (!(target_pieces.at(0).player == player || target_pieces.at(1).player == player)) {
+						return false;
+					}
+
+					if (target_pieces.at(0) == target_pieces.at(1)) {
+						return false;
+					}
 				}
 
 				if (card != Four && four_backwards) {
@@ -156,9 +166,17 @@ class CardPlay {
 					if (sum_count != 7) {
 						return false;
 					}
-				} else {
+				}
+
+				if (card != Jack && card != Seven) {
 					if (counts.size() > 0) {
 						return false;
+					}
+					for (std::size_t i = 0; i < target_pieces.size(); i++) {
+						PieceRef piece_ref = target_pieces.at(i);
+						if (piece_ref.player != player) {
+							return false;
+						}
 					}
 				}
 			}
@@ -222,7 +240,9 @@ class CardPlay {
 				}
 			}
 
-			assert(!valid || is_valid());
+			if (!is_valid()) {
+				valid = false;
+			}
 
 			return valid;
 		}

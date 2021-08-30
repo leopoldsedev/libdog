@@ -20,6 +20,11 @@ class BoardPosition {
 		explicit BoardPosition() : area(Path), player(-1), idx(-1) {
 		}
 
+		friend bool operator==(const BoardPosition& a, const BoardPosition& b)
+		{
+			return a.area == b.area && a.player == b.player && a.idx == b.idx;
+		}
+
 		friend std::ostream& operator<<(std::ostream& os, BoardPosition const& obj) {
 			  return os << obj.to_str();
 		}
