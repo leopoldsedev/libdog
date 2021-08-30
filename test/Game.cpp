@@ -400,6 +400,46 @@ TEST(CardTest, IntoFinishFlag) {
 	EXPECT_NE(game.board_state.get_piece(BoardPosition(Finish, player, 0)), nullptr);
 }
 
+TEST(FullGameTest, WinCondition) {
+	DogGame game;
+
+	EXPECT_EQ(game.result(), -1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 0)), BoardPosition(Finish, 0, 3));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 1)), BoardPosition(Finish, 0, 2));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 2)), BoardPosition(Finish, 0, 1));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 3)), BoardPosition(Finish, 0, 0));
+	EXPECT_EQ(game.result(), -1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(1, 0)), BoardPosition(Finish, 1, 3));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(1, 1)), BoardPosition(Finish, 1, 2));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(1, 2)), BoardPosition(Finish, 1, 1));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(1, 3)), BoardPosition(Finish, 1, 0));
+	EXPECT_EQ(game.result(), -1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(2, 0)), BoardPosition(Finish, 2, 3));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(2, 1)), BoardPosition(Finish, 2, 2));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(2, 2)), BoardPosition(Finish, 2, 1));
+	EXPECT_EQ(game.result(), -1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(3, 0)), BoardPosition(Finish, 3, 3));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(3, 1)), BoardPosition(Finish, 3, 2));
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(3, 2)), BoardPosition(Finish, 3, 1));
+	EXPECT_EQ(game.result(), -1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(2, 3)), BoardPosition(Finish, 2, 0));
+	EXPECT_EQ(game.result(), 0);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(2, 3)), BoardPosition(Kennel, 2, 3));
+	EXPECT_EQ(game.result(), -1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(3, 3)), BoardPosition(Finish, 3, 0));
+	EXPECT_EQ(game.result(), 1);
+
+	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(2, 3)), BoardPosition(Finish, 2, 0));
+	EXPECT_EQ(game.result(), 2);
+}
+
 TEST(FullGameTest, CardExchange) {
 	GTEST_SKIP();
 	// TODO

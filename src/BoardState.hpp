@@ -249,6 +249,18 @@ class BoardState {
 			return false;
 		}
 
+		bool check_finish_full(int player) {
+			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
+
+			for (std::size_t i = 0; i < finish.size(); i++) {
+				if (finish.at(i) == nullptr) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
 		static int get_start_path_idx(int player) {
 			return player * PATH_SECTION_LENGTH;
 		}

@@ -39,6 +39,34 @@ class DogGame {
 			next_hand_size = calc_next_hand_size(next_hand_size);
 		}
 
+		// -1 ... undecided (game not concluded yet)
+		//  0 ... team of player 0 won
+		//  1 ... team of player 1 won
+		//  2 ... both teams won (invalid, should not be possible)
+		int result() {
+			std::array<bool, PLAYER_COUNT> players_finish_full;
+			for (int i = 0; i < players_finish_full.size(); i++) {
+				players_finish_full.at(i) = board_state.check_finish_full(i);
+			}
+
+			bool team_0_won = (players_finish_full.at(0) && players_finish_full.at(2));
+			bool team_1_won = (players_finish_full.at(1) && players_finish_full.at(3));
+
+			if (team_0_won && team_1_won) {
+				return 2;
+			}
+
+			if (team_0_won) {
+				return 0;
+			}
+
+			if (team_1_won) {
+				return 1;
+			}
+
+			return -1;
+		}
+
 		int calc_next_hand_size(int current_hand_size) {
 			if (current_hand_size == 2) {
 				return 6;
@@ -48,6 +76,11 @@ class DogGame {
 		}
 
 		bool play_card(CardPlay play, bool check_turn, bool check_hand) {
+			if (result() >= 0) {
+				// Game is already over
+				return false;
+			}
+
 			if (!play.is_valid()) {
 				return false;
 			}
