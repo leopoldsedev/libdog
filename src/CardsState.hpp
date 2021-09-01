@@ -44,6 +44,11 @@ class CardsState {
 			hand.play_card(card);
 		}
 
+		void add_card_to_hand(int player, Card card) {
+			Hand& hand = get_hand(player);
+			hand.add_card(card);
+		}
+
 		bool hands_empty() {
 			for (int player = 0; player < PLAYER_COUNT; player++) {
 				Hand& hand = get_hand(player);

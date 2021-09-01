@@ -9,3 +9,6 @@
 #define KENNEL_SIZE (PIECE_COUNT)
 
 #define GET_TEAM_PLAYER_IDX(player_idx) (((player_idx) + 2) % PLAYER_COUNT)
+
+#define IS_VALID_PLAYER(x) (0 <= x && x < PLAYER_COUNT)
+#define IS_VALID_PIECE_RANK(x) (0 <= x && x < PIECE_COUNT)

@@ -117,7 +117,7 @@ class Discard : public Action {
 		}
 
 		virtual bool is_valid() const {
-			return Action::is_valid() && (card != None);
+			return (card != None);
 		}
 
 		friend bool operator==(const Discard& a, const Discard& b) = default;
@@ -145,6 +145,9 @@ class MoveSpecifier {
 		bool avoid_finish;
 
 		MoveSpecifier(PieceRef piece_ref, int count, bool avoid_finish) : piece_ref(piece_ref), count(count), avoid_finish(avoid_finish) {
+		}
+
+		MoveSpecifier(int piece_player, int piece_rank, int count, bool avoid_finish) : MoveSpecifier(PieceRef(piece_player, piece_rank), count, avoid_finish) {
 		}
 
 		friend bool operator==(const MoveSpecifier& a, const MoveSpecifier& b) = default;
@@ -180,6 +183,10 @@ class Move : public Action {
 			}
 
 			if (!move_specifier.piece_ref.is_valid()) {
+				return false;
+			}
+
+			if (move_specifier.count < 0 && move_specifier.avoid_finish) {
 				return false;
 			}
 
@@ -351,6 +358,24 @@ inline Card action_get_card(const ActionVar& action) {
 		return a->get_card();
 	} else if (MATCH(&action, Start, a)) {
 		return a->get_card();
+	}
+	assert(false);
+}
+
+inline Card action_get_card_raw(const ActionVar& action) {
+	// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
+	if (MATCH(&action, Give, a)) {
+		return a->get_card_raw();
+	} else if (MATCH(&action, Discard, a)) {
+		return a->get_card_raw();
+	} else if (MATCH(&action, Swap, a)) {
+		return a->get_card_raw();
+	} else if (MATCH(&action, Move, a)) {
+		return a->get_card_raw();
+	} else if (MATCH(&action, MoveMultiple, a)) {
+		return a->get_card_raw();
+	} else if (MATCH(&action, Start, a)) {
+		return a->get_card_raw();
 	}
 	assert(false);
 }

@@ -8,6 +8,40 @@ using std::regex, std::smatch, std::sregex_iterator;
 using std::stoi;
 
 
+optional<ActionVar> notation_parse_give(string notation_arg_str) {
+	regex regex(R"([A23456789TJQKX])");
+	smatch matches;
+
+	bool match = regex_match(notation_arg_str, matches, regex);
+
+	if (!match) {
+		return nullopt;
+	}
+
+	Card card = card_from_string(notation_arg_str);
+
+	assert(card != None);
+
+	return Give(card);
+}
+
+optional<ActionVar> notation_parse_discard(string notation_arg_str) {
+	regex regex(R"([A23456789TJQKX])");
+	smatch matches;
+
+	bool match = regex_match(notation_arg_str, matches, regex);
+
+	if (!match) {
+		return nullopt;
+	}
+
+	Card card = card_from_string(notation_arg_str);
+
+	assert(card != None);
+
+	return Discard(card);
+}
+
 // notation_arg_str is the string without the card specifier (e.g. "#" if full notation string is "A#")
 optional<ActionVar> notation_parse_forward(Card card, int player, string notation_arg_str) {
 	regex regex(R"((\d)(-?))");
@@ -20,6 +54,11 @@ optional<ActionVar> notation_parse_forward(Card card, int player, string notatio
 	}
 
 	int rank = stoi(matches[1]);
+
+	if (!IS_VALID_PIECE_RANK(rank)) {
+		return nullopt;
+	}
+
 	bool avoid_finish = (matches[2] == "-");
 
 	PieceRef piece_ref(player, rank);
@@ -35,6 +74,7 @@ optional<ActionVar> notation_parse_ace(int player, string notation_arg_str) {
 	bool match = regex_match(notation_arg_str, matches, regex);
 
 	if (!match) {
+		return nullopt;
 	}
 
 	bool start_card = (matches[1] == "#");
@@ -44,6 +84,10 @@ optional<ActionVar> notation_parse_ace(int player, string notation_arg_str) {
 	} else {
 		bool alt_action = (matches[3] == "'");
 		int rank = stoi(matches[4]);
+
+		if (!IS_VALID_PIECE_RANK(rank)) {
+			return nullopt;
+		}
 		bool avoid_finish = (matches[5] == "-");
 
 		PieceRef piece_ref(player, rank);
@@ -76,6 +120,10 @@ optional<ActionVar> notation_parse_four(int player, string notation_arg_str) {
 		avoid_finish = (matches[6] == "-");
 	}
 
+	if (!IS_VALID_PIECE_RANK(rank)) {
+		return nullopt;
+	}
+
 	PieceRef piece_ref(player, rank);
 	int count = (alt_action ? -4 : 4);
 
@@ -105,6 +153,11 @@ optional<ActionVar> notation_parse_seven(int player, string notation_arg_str) {
 	for(; iter != end; iter++)
 	{
 		int rank = stoi(iter->str(1));
+
+		if (!IS_VALID_PIECE_RANK(rank)) {
+			return nullopt;
+		}
+
 		bool other_player = (iter->str(2) == "'");
 		int count = stoi(iter->str(3));
 		bool avoid_finish = (iter->str(4) == "-");
@@ -137,8 +190,22 @@ optional<ActionVar> notation_parse_jack(int player, string notation_arg_str) {
 	}
 
 	int rank_1 = stoi(matches[1]);
+
+	if (!IS_VALID_PIECE_RANK(rank_1)) {
+		return nullopt;
+	}
+
 	int player_2 = stoi(matches[2]);
+
+	if (!IS_VALID_PLAYER(player_2)) {
+		return nullopt;
+	}
+
 	int rank_2 = stoi(matches[3]);
+
+	if (!IS_VALID_PIECE_RANK(rank_2)) {
+		return nullopt;
+	}
 
 	PieceRef piece_ref_1(player, rank_1);
 	PieceRef piece_ref_2(player_2, rank_2);
@@ -175,13 +242,46 @@ optional<ActionVar> notation_parse_joker(int player, string notation_arg_str) {
 	string joker_card_str = notation_arg_str.substr(0, 1);
 	Card joker_card = card_from_string(joker_card_str);
 
-	if (joker_card == Joker) {
+	if (joker_card == None || joker_card == Joker) {
 		return nullopt;
 	}
 
 	optional<ActionVar> result = try_parse_notation(player, notation_arg_str);
 	if (result.has_value()) {
 		action_set_joker(result.value(), true);
+	}
+
+	return result;
+}
+
+optional<ActionVar> notation_parse_card_play(int player, Card card, string notation_arg_str) {
+	optional<ActionVar> result = nullopt;
+
+	switch (card) {
+		case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
+			result = notation_parse_forward(card, player, notation_arg_str);
+			break;
+		case Ace:
+			result = notation_parse_ace(player, notation_arg_str);
+			break;
+		case Four:
+			result = notation_parse_four(player, notation_arg_str);
+			break;
+		case Seven:
+			result = notation_parse_seven(player, notation_arg_str);
+			break;
+		case Jack:
+			result = notation_parse_jack(player, notation_arg_str);
+			break;
+		case King:
+			result = notation_parse_king(player, notation_arg_str);
+			break;
+		case Joker:
+			result = notation_parse_joker(player, notation_arg_str);
+			break;
+		case None:
+		default:
+			break;
 	}
 
 	return result;
@@ -198,52 +298,41 @@ optional<ActionVar> try_parse_notation(int player, string notation_str) {
 	// Source: https://stackoverflow.com/a/83538/3118787
 	notation_str.erase(remove_if(notation_str.begin(), notation_str.end(), ::isspace), notation_str.end());
 
-	string card_str = notation_str.substr(0, 1);
+	string first_char = notation_str.substr(0, 1);
 	notation_str.erase(0, 1);
-
-	// TODO Handle discard/give notation
-
-	Card card = card_from_string(card_str);
-	if (card == None) {
-		return nullopt;
-	}
 
 	optional<ActionVar> result;
 
-	switch (card) {
-		case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
-			result = notation_parse_forward(card, player, notation_str);
-			break;
-		case Ace:
-			result = notation_parse_ace(player, notation_str);
-			break;
-		case Four:
-			result = notation_parse_four(player, notation_str);
-			break;
-		case Seven:
-			result = notation_parse_seven(player, notation_str);
-			break;
-		case Jack:
-			result = notation_parse_jack(player, notation_str);
-			break;
-		case King:
-			result = notation_parse_king(player, notation_str);
-			break;
-		case Joker:
-			result = notation_parse_joker(player, notation_str);
-			break;
-		case None:
-		default:
-			break;
+	if (first_char == "G") {
+		result = notation_parse_give(notation_str);
+	} else if (first_char == "D") {
+		result = notation_parse_discard(notation_str);
+	} else {
+		Card card = card_from_string(first_char);
+		if (card == None) {
+			return nullopt;
+		}
+
+		result = notation_parse_card_play(player, card, notation_str);
 	}
 
 	if (result.has_value()) {
 		if (!action_is_valid(result.value())) {
-			result = nullopt;
+			return nullopt;
 		}
 	}
 
 	return result;
+}
+
+string notation_give(Give give) {
+	std::stringstream ss;
+
+	ss << "G";
+
+	ss << card_to_string(give.get_card_raw());
+
+	return ss.str();
 }
 
 string notation_discard(Discard discard) {
@@ -337,9 +426,7 @@ std::string to_notation(int player, ActionVar action) {
 
 	// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
 	if (MATCH(&action, Give, a)) {
-		// TODO
-		std::cout << a;
-		assert(false);
+		ss << notation_give(*a);
 	} else if (MATCH(&action, Discard, a)) {
 		ss << notation_discard(*a);
 	} else if (MATCH(&action, Start, a)) {

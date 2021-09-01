@@ -20,12 +20,11 @@ class BoardPosition {
 		}
 
 		bool is_valid() const {
-			if (player >= PLAYER_COUNT) {
-				return false;
-			}
-
-			if (area != Path && player < 0) {
-				return false;
+			if (!IS_VALID_PLAYER(player)) {
+				// If piece is on path the player is set to a negative value (typically -1)
+				if (!(area == Path && player < 0)) {
+					return false;
+				}
 			}
 
 			if (idx < 0) {

@@ -13,15 +13,12 @@ class PieceRef {
 			assert(is_valid());
 		}
 
-		explicit PieceRef(int player): player(player), rank(0) {
-		}
-
 		bool is_valid() const {
-			if (rank < 0 || rank >= PIECE_COUNT) {
+			if (!IS_VALID_PIECE_RANK(rank)) {
 				return false;
 			}
 
-			if (player < 0 || player >= PLAYER_COUNT) {
+			if (!IS_VALID_PLAYER(player)) {
 				return false;
 			}
 
