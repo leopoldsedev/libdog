@@ -1,6 +1,7 @@
 #pragma once
 
-#include <vector>
+#include <array>
+#include <map>
 #include <iostream>
 
 
@@ -22,8 +23,10 @@ enum Card {
 	Joker = 14,
 };
 
-const std::vector<Card> start_cards = { Ace, King };
+const std::array<Card, 3> start_cards = { Ace, King, Joker };
+
+bool is_start_card(Card card);
 
 Card card_from_string(std::string card_str);
 
-bool is_start_card(Card card);
+std::string card_to_string(Card card);

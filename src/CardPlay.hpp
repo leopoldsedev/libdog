@@ -26,18 +26,17 @@ class CardPlay {
 		std::vector<int> counts = {};
 
 		bool start_card = false;
-		bool ace_one = false;
-		bool four_backwards = false;
+		bool alt_action = false;
 
 		bool is_joker = false;
 
-		CardPlay(int player, Card card) : CardPlay(player, card, false, false, false) {
+		CardPlay(int player, Card card) : CardPlay(player, card, false, false) {
 		}
 
-		CardPlay(int player, Card card, bool start_card) : CardPlay(player, card, start_card, false, false) {
+		CardPlay(int player, Card card, bool start_card) : CardPlay(player, card, start_card, false) {
 		}
 
-		CardPlay(int player, Card card, bool start_card, bool ace_one, bool four_backwards) : player(player), card(card), start_card(start_card), ace_one(ace_one), four_backwards(four_backwards) {
+		CardPlay(int player, Card card, bool start_card, bool alt_action) : player(player), card(card), start_card(start_card), alt_action(alt_action) {
 		}
 
 		CardPlay() {
@@ -52,7 +51,7 @@ class CardPlay {
 
 			switch (card) {
 				case Ace: {
-					count = ace_one ? 1 : 11;
+					count = alt_action ? 1 : 11;
 					break;
 				}
 				case Two: {
@@ -64,7 +63,11 @@ class CardPlay {
 					break;
 				}
 				case Four: {
-					count = 4;
+					if (alt_action) {
+						count = -4;
+					} else {
+						count = 4;
+					}
 					break;
 				}
 				case Five: {
@@ -97,10 +100,6 @@ class CardPlay {
 				}
 				default: {
 				}
-			}
-
-			if (four_backwards) {
-				count *= -1;
 			}
 
 			return count;
@@ -146,7 +145,7 @@ class CardPlay {
 					}
 				}
 
-				if (card != Four && four_backwards) {
+				if (card != Four && card != Ace && alt_action) {
 					return false;
 				}
 
@@ -158,7 +157,7 @@ class CardPlay {
 					int sum_count = 0;
 					for (std::size_t i = 0; i < counts.size(); i++) {
 						int count = counts.at(i);
-						if (count < 0) {
+						if (count <= 0) {
 							return false;
 						}
 						sum_count += counts.at(i);
@@ -199,6 +198,10 @@ class CardPlay {
 			notation_str.erase(0, 1);
 
 			card = card_from_string(card_str);
+			if (card == None) {
+				return false;
+			}
+
 			this->player = player;
 
 			bool valid = false;
@@ -276,7 +279,7 @@ class CardPlay {
 				start_card = (matches[1] == "#");
 
 				if (!start_card) {
-					ace_one = (matches[3] == "'");
+					alt_action = (matches[3] == "'");
 					int rank = std::stoi(matches[4]);
 					bool avoid_finish = (matches[5] == "-");
 
@@ -300,11 +303,11 @@ class CardPlay {
 				bool avoid_finish;
 
 				if (matches[2] != "") {
-					four_backwards = true;
+					alt_action = true;
 					avoid_finish = false;
 					rank = std::stoi(matches[3]);
 				} else {
-					four_backwards = false;
+					alt_action = false;
 					rank = std::stoi(matches[5]);
 					avoid_finish = (matches[6] == "-");
 				}
@@ -420,4 +423,88 @@ class CardPlay {
 			return match;
 		}
 
+		std::string get_notation(int player_idx) {
+			std::stringstream ss;
+
+			if (is_joker) {
+				ss << card_to_string(Joker);
+			}
+
+			std::string card_str = card_to_string(card);
+			ss << card_str;
+
+			switch (card) {
+				case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
+					ss << target_pieces.at(0).rank;
+					if (!into_finish.at(0)) {
+						ss << "-";
+					}
+					break;
+				case Ace:
+					if (start_card) {
+						ss << "#";
+					} else {
+						if (alt_action) {
+							ss << "'";
+						}
+						ss << target_pieces.at(0).rank;
+						if (!into_finish.at(0)) {
+							ss << "-";
+						}
+					}
+					break;
+				case Four:
+					if (alt_action) {
+						ss << "'";
+					}
+					ss << target_pieces.at(0).rank;
+					if (!into_finish.at(0)) {
+						ss << "-";
+					}
+					break;
+				case Seven:
+					for (std::size_t i = 0; i < target_pieces.size(); i++) {
+						PieceRef piece_ref = target_pieces.at(i);
+						int count = counts.at(i);
+						bool avoid_finish = !into_finish.at(i);
+
+						ss << piece_ref.rank;
+						if (player_idx != piece_ref.player) {
+							ss << "'";
+						}
+						ss << count;
+						if (avoid_finish) {
+							ss << "-";
+						}
+					}
+					break;
+				case Jack:
+					if (target_pieces.at(0).player == player_idx) {
+						ss << target_pieces.at(0).rank;
+						ss << target_pieces.at(1).player;
+						ss << target_pieces.at(1).rank;
+					} else {
+						ss << target_pieces.at(1).rank;
+						ss << target_pieces.at(0).player;
+						ss << target_pieces.at(0).rank;
+					}
+					break;
+				case King:
+					if (start_card) {
+						ss << "#";
+					} else {
+						ss << target_pieces.at(0).rank;
+						if (!into_finish.at(0)) {
+							ss << "-";
+						}
+					}
+					break;
+				case Joker:
+				case None:
+				default:
+					break;
+			}
+
+			return ss.str();
+		}
 };

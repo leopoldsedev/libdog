@@ -15,4 +15,8 @@ class PieceRef {
 		{
 			return a.player == b.player && a.rank == b.rank;
 		}
+
+		friend bool operator==(const PieceRef& a, const PieceRef& b) {
+			return (a.player == b.player) && (a.rank == b.rank);
+		}
 };

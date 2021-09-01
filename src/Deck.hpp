@@ -52,21 +52,16 @@ class Deck {
 			std::random_shuffle(cards.begin(), cards.end());
 		}
 
-		static std::string card_to_str(Card card) {
-			std::string map[] = { "-", "A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "X" };
-			return map[card];
-		}
-
 		void print_state() {
 			std::cout << "deck (" << cards.size() << "): ";
 			for (auto c = cards.rbegin(); c != cards.rend(); c++) {
-				std::cout << card_to_str(*c);
+				std::cout << card_to_string(*c);
 			}
 			std::cout << std::endl;
 
 			std::cout << "drawn (" << drawn.size() << "): ";
 			for (auto c = drawn.rbegin(); c != drawn.rend(); c++) {
-				std::cout << card_to_str(*c);
+				std::cout << card_to_string(*c);
 			}
 			std::cout << std::endl;
 		}

@@ -9,10 +9,11 @@
 #include "Deck.hpp"
 
 
-class Hand {
-	std::vector<Card> cards;
+// TODO Deck and Hand could be combined into a CardStack class. See https://codereview.stackexchange.com/a/20265
 
+class Hand {
 	public:
+		std::vector<Card> cards;
 		Hand() {
 		}
 
@@ -64,7 +65,7 @@ class Hand {
 			std::stringstream ss;
 
 			for (auto& card : cards) {
-				ss << Deck::card_to_str(card);
+				ss << card_to_string(card);
 			}
 
 			return ss.str();

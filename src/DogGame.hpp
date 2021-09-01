@@ -14,6 +14,8 @@
 #include "Util.hpp"
 
 // TODO Correctly use different ways of specifying pieces/positions (BoardPosition, PieceRef, PiecePtr, path_idx, finish_idx) depending on the minimum needed for any given function
+// TODO Implement giving cards at start of a round
+// TODO Implement throwing away card if player cannot play anything
 
 
 class DogGame {
@@ -45,7 +47,7 @@ class DogGame {
 		//  2 ... both teams won (invalid, should not be possible)
 		int result() {
 			std::array<bool, PLAYER_COUNT> players_finish_full;
-			for (int i = 0; i < players_finish_full.size(); i++) {
+			for (std::size_t i = 0; i < players_finish_full.size(); i++) {
 				players_finish_full.at(i) = board_state.check_finish_full(i);
 			}
 
@@ -75,7 +77,12 @@ class DogGame {
 			}
 		}
 
-		bool play_card(CardPlay play, bool check_turn, bool check_hand) {
+		void next_turn() {
+			player_turn++;
+			player_turn %= PLAYER_COUNT;
+		}
+
+		bool check_common(int player, CardAction& action) {
 			if (result() >= 0) {
 				// Game is already over
 				return false;
@@ -334,6 +341,220 @@ class DogGame {
 			}
 
 			return true;
+		}
+
+		// TODO Add action to give card to team mate
+		// TODO Add action to throw away a card when the player cannot play any card
+		std::vector<CardPlay> possible_actions(int player) {
+			std::vector<CardPlay> result;
+
+			std::vector<Card> cards;
+
+			// Process joker card if in hand
+			bool has_joker = cards_state.get_hand(player).has_card(Joker);
+			if (has_joker) {
+				for (int i = Ace; i != Joker; i++) {
+					Card card = static_cast<Card>(i);
+					std::vector<CardPlay> plays = possible_actions_for_card(player, card, true);
+					result.insert(result.end(), plays.begin(), plays.end());
+				}
+			}
+
+			// Process hand cards
+			cards = cards_state.get_hand(player).cards;
+			// Remove duplicates
+			// Source: https://stackoverflow.com/a/1041939/3118787
+			sort(cards.begin(), cards.end());
+			cards.erase(unique(cards.begin(), cards.end()), cards.end());
+
+			for (Card card : cards) {
+				std::vector<CardPlay> plays = possible_actions_for_card(player, card, false);
+				result.insert(result.end(), plays.begin(), plays.end());
+			}
+
+			return result;
+		}
+
+		// TODO Split into multiple function, remove code duplication, make more efficient
+		std::vector<CardPlay> possible_actions_for_card(int player, Card card, bool is_joker) {
+			if (card == None || card == Joker) {
+				return {};
+			}
+
+			std::vector<CardPlay> result;
+			bool legal;
+			CardPlay play;
+
+			switch (card) {
+				case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
+					for (int i = 0; i < PIECE_COUNT; i++) {
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(true);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(false);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+					}
+					break;
+				case Ace:
+					play = CardPlay(player, card);
+					play.start_card = true;
+					play.is_joker = is_joker;
+					legal = play_card(play, false, false, true);
+					if (legal) {
+						result.push_back(play);
+					}
+
+					for (int i = 0; i < PIECE_COUNT; i++) {
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(true);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(false);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(true);
+						play.alt_action = true;
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(false);
+						play.alt_action = true;
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+					}
+					break;
+				case Four:
+					for (int i = 0; i < PIECE_COUNT; i++) {
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(true);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(false);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(true);
+						play.alt_action = true;
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+					}
+					break;
+				case Seven:
+					// TODO
+					break;
+				case Jack:
+					for (int i = 0; i < PIECE_COUNT; i++) {
+						for (int j = 0; i < PLAYER_COUNT; i++) {
+							for (int k = 0; i < PIECE_COUNT; i++) {
+								play = CardPlay(player, card);
+								play.target_pieces.push_back(PieceRef(player, i));
+								play.target_pieces.push_back(PieceRef(j, k));
+								play.is_joker = is_joker;
+
+								legal = play_card(play, false, false, true);
+								if (legal) {
+									result.push_back(play);
+								}
+							}
+						}
+					}
+					break;
+				case King:
+					play = CardPlay(player, card);
+					play.start_card = true;
+					play.is_joker = is_joker;
+
+					legal = play_card(play, false, false, true);
+					if (legal) {
+						result.push_back(play);
+					}
+
+					for (int i = 0; i < PIECE_COUNT; i++) {
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(true);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+
+						play = CardPlay(player, card);
+						play.target_pieces.push_back(PieceRef(player, i));
+						play.into_finish.push_back(false);
+						play.is_joker = is_joker;
+
+						legal = play_card(play, false, false, true);
+						if (legal) {
+							result.push_back(play);
+						}
+					}
+					break;
+				case Joker:
+				case None:
+				default:
+					break;
+			}
+
+			return result;
 		}
 
 		// 0 = nothing, 1 = path, 2 = finish, 3 = kennel, 4 = char

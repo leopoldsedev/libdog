@@ -1,8 +1,11 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <vector>
+#include <cassert>
 
 #include "DogGame.hpp"
+#include "CardPlay.hpp"
 
 #define sleep(x) (std::this_thread::sleep_for(std::chrono::milliseconds(x)))
 
@@ -13,41 +16,27 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 {
 	DogGame game;
 
-	std::cout << game << std::endl;
-
-	game.start_piece(0);
-//    game.start(1);
-//    game.start(2);
-//    game.start(3);
-	std::cout << game << std::endl;
-
-	int i = 0;
-	bool legal = true;
-//    while (true) {
-	for (i = 0; i < 65; i++) {
-		legal = game.move_piece(game.board_state.get_piece(BoardPosition(i % 64)), 1, i != 0, false, false);
-		if (!legal) {
-			std::cout << "illegal move" << std::endl;
-			break;
-		}
-//        i++;
+	while (game.result() == -1) {
 		std::cout << game << std::endl;
+		std::cout << "player " << game.player_turn << "'s turn" << std::endl;
 
-		sleep(100);
-	}
+		std::vector<CardPlay> plays = game.possible_actions(game.player_turn);
 
-	i = 0;
-	while (true) {
-//        legal = game.move_piece_in_finish(0, i, 1, false);
-		if (!legal) {
-			std::cout << "illegal move" << std::endl;
-			break;
+		for (std::size_t i = 0; i < plays.size(); i++) {
+			CardPlay play = plays.at(i);
+			std::cout << i << ": " << play.get_notation(game.player_turn) << std::endl;
 		}
 
-		i++;
-		std::cout << game << std::endl;
-		sleep(100);
+		std::size_t selection;
+		do {
+			std::cin >> selection;
+		} while (selection >= plays.size());
+
+		bool legal = game.play_card(plays.at(selection), true, true, false);
+		assert(legal);
 	}
+
+	std::cout << "Game concluded" << std::endl;
 
 	return 0;
 }
