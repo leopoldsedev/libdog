@@ -201,6 +201,8 @@ optional<ActionVar> try_parse_notation(int player, string notation_str) {
 	string card_str = notation_str.substr(0, 1);
 	notation_str.erase(0, 1);
 
+	// TODO Handle discard/give notation
+
 	Card card = card_from_string(card_str);
 	if (card == None) {
 		return nullopt;
@@ -244,10 +246,20 @@ optional<ActionVar> try_parse_notation(int player, string notation_str) {
 	return result;
 }
 
-string notation_move(Start start) {
+string notation_discard(Discard discard) {
 	std::stringstream ss;
 
-	ss << card_to_string(start.get_card());
+	ss << "D";
+
+	ss << card_to_string(discard.get_card_raw());
+
+	return ss.str();
+}
+
+string notation_start(Start start) {
+	std::stringstream ss;
+
+	ss << card_to_string(start.get_card_raw());
 
 	ss << "#";
 
@@ -257,7 +269,7 @@ string notation_move(Start start) {
 string notation_move(Move move) {
 	std::stringstream ss;
 
-	ss << card_to_string(move.get_card());
+	ss << card_to_string(move.get_card_raw());
 
 	if (move.get_count() == -4 || move.get_count() == 1) {
 		ss << "'";
@@ -275,7 +287,7 @@ string notation_move(Move move) {
 string notation_move_multiple(int player, MoveMultiple move_multiple) {
 	std::stringstream ss;
 
-	ss << card_to_string(move_multiple.get_card());
+	ss << card_to_string(move_multiple.get_card_raw());
 
 	for (std::size_t i = 0; i < move_multiple.get_move_specifiers().size(); i++) {
 		MoveSpecifier move_specifier = move_multiple.get_move_specifiers().at(i);
@@ -299,7 +311,7 @@ string notation_move_multiple(int player, MoveMultiple move_multiple) {
 string notation_swap(int player, Swap swap) {
 	std::stringstream ss;
 
-	ss << card_to_string(swap.get_card());
+	ss << card_to_string(swap.get_card_raw());
 
 	if (swap.get_piece_1().player == player) {
 		ss << swap.get_piece_1().rank;
@@ -329,11 +341,9 @@ std::string to_notation(int player, ActionVar action) {
 		std::cout << a;
 		assert(false);
 	} else if (MATCH(&action, Discard, a)) {
-		// TODO
-		std::cout << a;
-		assert(false);
+		ss << notation_discard(*a);
 	} else if (MATCH(&action, Start, a)) {
-		ss << notation_move(*a);
+		ss << notation_start(*a);
 	} else if (MATCH(&action, Move, a)) {
 		ss << notation_move(*a);
 	} else if (MATCH(&action, MoveMultiple, a)) {

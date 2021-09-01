@@ -16,7 +16,8 @@
 
 // TODO Correctly use different ways of specifying pieces/positions (BoardPosition, PieceRef, PiecePtr, path_idx, finish_idx) depending on the minimum needed for any given function
 // TODO Implement giving cards at start of a round
-// TODO Implement throwing away card if player cannot play anything
+// TODO Implement playing for team mate when a player has all pieces in the finish
+// TODO Implement notation for board state
 
 #define APPEND(x, y) do { \
 	auto b = (y); \
@@ -113,12 +114,7 @@ class DogGame {
 			}
 
 			if (check_hands) {
-				Card card;
-				if (action_is_joker(action)) {
-					card = Joker;
-				} else {
-					card = action_get_card(action);
-				}
+				Card card = action_get_card(action);
 				bool player_has_card = cards_state.check_player_has_card(player, card);
 
 				if (!player_has_card) {
@@ -189,10 +185,25 @@ class DogGame {
 				return false;
 			}
 
-			// TODO
-			std::cout << modify_state;
-			assert(false);
-			return false;
+			std::vector<ActionVar> possible_card_plays = get_possible_card_plays(player);
+			if (possible_card_plays.size() > 0) {
+				// Can only discard a card if none of them can be played
+				return false;
+			}
+
+			bool has_card = cards_state.check_player_has_card(player, discard.get_card());
+
+			if (!has_card) {
+				// Card has to be in player's hand to be discarded
+				return false;
+			}
+
+			// Card will be removed in modify_state_common()
+			if (modify_state) {
+				modify_state_common(player, discard);
+			}
+
+			return true;
 		}
 
 		bool try_play(int player, const Start& start, bool modify_state = true) {
@@ -285,7 +296,8 @@ class DogGame {
 				return false;
 			}
 
-			BoardPosition position_result;
+			// TODO This is not a good initialization
+			BoardPosition position_result = BoardPosition(0);
 			int count_on_path = 0;
 
 			if (piece->position.area == Kennel) {
@@ -306,8 +318,9 @@ class DogGame {
 				   true          blocked  free      continue on path
 				   true          blocked  blocked   illegal
 				*/
-				BoardPosition path_position_result;
-				BoardPosition finish_position_result;
+				// TODO This is not a good initialization
+				BoardPosition path_position_result = BoardPosition(0);
+				BoardPosition finish_position_result = BoardPosition(0);
 				int path_count_on_path = count;
 				int finish_count_on_path;
 				bool path_free = check_move_on_path(piece->position.idx, count, path_position_result);
@@ -448,7 +461,13 @@ class DogGame {
 				return false;
 			}
 
+			if (piece_1->position.area != Path || piece_2->position.area != Path) {
+				// Only pieces on path can be swapped
+				return false;
+			}
+
 			if (piece_1->blocking || piece_2->blocking) {
+				// Blocking pieces cannot be swapped
 				return false;
 			}
 
@@ -457,6 +476,19 @@ class DogGame {
 			}
 
 			return true;
+		}
+
+		std::vector<ActionVar> possible_discards(int player) {
+			std::vector<ActionVar> result;
+
+			std::vector<Card> cards = cards_state.get_hand(player).cards;
+
+			for (Card card : cards) {
+				Discard discard(card);
+				result.push_back(discard);
+			}
+
+			return result;
 		}
 
 		std::vector<ActionVar> possible_starts(int player, Card card, bool is_joker) {
@@ -478,9 +510,11 @@ class DogGame {
 			for (int i = 0; i < PIECE_COUNT; i++) {
 				PieceRef piece_ref(player, i);
 				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
-				if (piece->position.area != Path) {
+
+				if (piece->position.area == Kennel) {
 					continue;
 				}
+
 				Move move(card, piece_ref, count, false, is_joker);
 
 				bool legal = try_play(player, move, false);
@@ -488,16 +522,24 @@ class DogGame {
 					result.push_back(move);
 				}
 
-				// Check if avoid_finish flag would have an effect
-				int count_on_path_result;
-				int steps_into_finish = calc_steps_into_finish(player, piece->position.idx, count, piece->blocking, count_on_path_result);
+				if (piece->position.area == Path) {
+					// Check if avoid_finish flag would have an effect
+					int count_on_path_result;
+					// TODO These are essentially the same checks as in try_enter_finish(). Maybe move this functionality into a new function
+					int steps_into_finish = calc_steps_into_finish(player, piece->position.idx, count, piece->blocking, count_on_path_result);
 
-				if (steps_into_finish > 0) {
-					move = Move(card, piece_ref, count, true, is_joker);
+					if (steps_into_finish > 0) {
+						BoardPosition position_result = BoardPosition(0);
+						// In this check position index "-1" in the finish represents the position right before the finish
+						bool legal = check_move_in_finish(player, -1, steps_into_finish, position_result);
+						if (legal) {
+							move = Move(card, piece_ref, count, true, is_joker);
 
-					legal = try_play(player, move, false);
-					if (legal) {
-						result.push_back(move);
+							legal = try_play(player, move, false);
+							if (legal) {
+								result.push_back(move);
+							}
+						}
 					}
 				}
 			}
@@ -508,7 +550,19 @@ class DogGame {
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker) {
 			std::vector<ActionVar> result;
 
-			// TODO
+			// TODO Implement as recursive function. Something like:
+			/*
+			get_seven_splits(int count, std::vector<PieceRef> pieces, std::vector<int> max_count) {
+				if (count == 0) {
+					return {};
+				}
+				result = {};
+				for (int i = 0; i < first_max_count; i++) {
+					splits = get_seven_splits(count - 1, pieces_without_first, max_count_without_first);
+					result.append(splits);
+				}
+			}
+			*/
 			std::cout << player << card << count << is_joker;
 
 			return result;
@@ -518,8 +572,8 @@ class DogGame {
 			std::vector<ActionVar> result;
 
 			for (int i = 0; i < PIECE_COUNT; i++) {
-				for (int j = 0; i < PLAYER_COUNT; i++) {
-					for (int k = 0; i < PIECE_COUNT; i++) {
+				for (int j = 0; j < PLAYER_COUNT; j++) {
+					for (int k = 0; k < PIECE_COUNT; k++) {
 						Swap swap(card, PieceRef(player, i), PieceRef(j, k), is_joker);
 
 						bool legal = try_play(player, swap, false);
@@ -533,9 +587,7 @@ class DogGame {
 			return result;
 		}
 
-		// TODO Add action to give card to team mate
-		// TODO Add action to throw away a card when the player cannot play any card
-		std::vector<ActionVar> possible_actions(int player) {
+		std::vector<ActionVar> get_possible_card_plays(int player) {
 			std::vector<ActionVar> result;
 
 			std::vector<Card> cards;
@@ -565,7 +617,24 @@ class DogGame {
 			return result;
 		}
 
-		// TODO Split into multiple function, remove code duplication, make more efficient
+		// TODO Add action to give card to team mate
+		std::vector<ActionVar> get_possible_actions(int player) {
+			std::vector<ActionVar> result = get_possible_card_plays(player);
+
+			if (result.size() == 0) {
+				// None of the cards can be played, player can only discard one of them
+
+				APPEND(result, possible_discards(player));
+			}
+
+			// If it is a player's turn they either can play a card or discard a card
+			// It should not be possible to be next and not have a possible action (i.e. no cards in hand).
+			assert(player != player_turn || result.size() > 0);
+
+			return result;
+		}
+
+		// TODO Try removing is_joker parameter and instead just passing Joker as card
 		std::vector<ActionVar> possible_actions_for_card(int player, Card card, bool is_joker) {
 			if (card == None || card == Joker) {
 				return {};
@@ -611,30 +680,30 @@ class DogGame {
 			return result;
 		}
 
-		// 0 = nothing, 1 = path, 2 = finish, 3 = kennel, 4 = char
+		// 0 = nothing, 1 = path, 2 = finish, 3 = kennel, 4 = char, 5 = block indicator
 		std::array<std::array<int, 41>, 21> vis_map_spec = {
 			{
-				{ 4, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 },
+				{ 4, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 5, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 },
 				{ 0, 0, 0, 0, 0, 4, 0, 4, 0, 4, 0, 4, 0, 0, 0, 0, 1, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 4, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5 },
 				{ 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 },
 				{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1 },
 				{ 1, 0, 0, 2, 0, 2, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, 2, 0, 0, 1 },
 				{ 1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
 				{ 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+				{ 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 0, 4 },
+				{ 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 5, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 0, 4 },
 			}
 		};
 		std::array<std::array<int, 41>, 21> vis_map_val = {
@@ -646,20 +715,20 @@ class DogGame {
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 2, 0, '2', 0, 0, 56, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, '3', 0, 0, 0, 0, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
 				{ 12, 0, 11, 0, 10, 0, 9, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 0, 51, 0, 50, 0, 49, 0, 48 },
 				{ 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '/', 0, 47 },
 				{ 14, 0, 0, 10, 0, 11, 0, 12, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 0, 32, 0, 31, 0, 30, 0, 0, 46 },
 				{ 15, 0, '/', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45 },
 				{ 16, 0, 17, 0, 18, 0, 19, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 41, 0, 42, 0, 43, 0, 44 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+				{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 22, 0, 0, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0, 0, 21, 0, 0, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 0, 0, 0, 0, 20, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
 				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 0, '\\', 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32, 0, 0, 0, 0, 20, 0, 21, 0, 22, 0, 23, 0, 0, 0, 0, '2' },
+				{ '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32, 2, 0, 0, 0, 20, 0, 21, 0, 22, 0, 23, 0, 0, 0, 0, '2' },
 			}
 		};
 
@@ -669,6 +738,10 @@ class DogGame {
 
 		std::string to_str() const {
 			std::stringstream ss;
+
+			const char field_char = '.';
+			const char filler_char = ' ';
+			const char blocked_char = '*';
 
 			for (std::size_t row = 0; row != vis_map_spec.size(); row++) {
 				for (std::size_t col = 0; col != vis_map_spec.at(0).size(); col++) {
@@ -680,7 +753,7 @@ class DogGame {
 							const PiecePtr& piece = board_state.path.at(val);
 
 							if (piece == nullptr) {
-								ss << 'o';
+								ss << field_char;
 							} else {
 								ss << piece->player;
 							}
@@ -691,26 +764,26 @@ class DogGame {
 							int player = val / 10;
 							int finish_idx = val % 10;
 
-							bool occupied = (board_state.finishes.at(player).at(finish_idx) != nullptr);
+							const PiecePtr& piece = board_state.finishes.at(player).at(finish_idx);
 
-							if (occupied) {
-								ss << player;
+							if (piece == nullptr) {
+								ss << field_char;
 							} else {
-								ss << 'o';
+								ss << piece->player;
 							}
 
 							break;
 						}
 						case 3: {
 							int player = val / 10;
-							int finish_idx = val % 10;
+							int kennel_idx = val % 10;
 
-							bool occupied = (board_state.kennels.at(player).at(finish_idx) != nullptr);
+							const PiecePtr& piece = board_state.kennels.at(player).at(kennel_idx);
 
-							if (occupied) {
-								ss << player;
+							if (piece == nullptr) {
+								ss << field_char;
 							} else {
-								ss << 'o';
+								ss << piece->player;
 							}
 
 							break;
@@ -719,8 +792,21 @@ class DogGame {
 							ss << ((char) (val));
 							break;
 						}
+						case 5: {
+							int player = val;
+							int path_idx = board_state.get_start_path_idx(player);
+							const PiecePtr& piece = board_state.path.at(path_idx);
+
+							if (piece != nullptr && piece->blocking) {
+								ss << blocked_char;
+							} else {
+								ss << filler_char;
+							}
+
+							break;
+						}
 						default: {
-							ss << ' ';
+							ss << filler_char;
 							break;
 						}
 					}

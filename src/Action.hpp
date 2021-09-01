@@ -74,6 +74,14 @@ class Action {
 		}
 
 		Card get_card() const {
+			if (joker) {
+				return Joker;
+			}
+
+			return get_card_raw();
+		}
+
+		Card get_card_raw() const {
 			return card;
 		}
 
@@ -84,6 +92,8 @@ class Action {
 		void set_joker(bool joker) {
 			this->joker = joker;
 		}
+
+		friend bool operator==(const Action& a, const Action& b) = default;
 };
 
 class Give : public Action {
@@ -95,21 +105,22 @@ class Give : public Action {
 		}
 
 		virtual bool is_valid() const {
-			return Action::is_valid() && (card != None);
+			return (card != None);
 		}
+
+		friend bool operator==(const Give& a, const Give& b) = default;
 };
 
 class Discard : public Action {
 	public:
-		Discard(Card card, bool joker) : Action(card, joker) {
-		}
-
-		Discard(Card card) : Discard(card, false) {
+		Discard(Card card) : Action(card, false) {
 		}
 
 		virtual bool is_valid() const {
 			return Action::is_valid() && (card != None);
 		}
+
+		friend bool operator==(const Discard& a, const Discard& b) = default;
 };
 
 class Start : public Action {
@@ -123,6 +134,8 @@ class Start : public Action {
 		virtual bool is_valid() const {
 			return Action::is_valid() && is_start_card(card);
 		}
+
+		friend bool operator==(const Start& a, const Start& b) = default;
 };
 
 class MoveSpecifier {
@@ -133,6 +146,8 @@ class MoveSpecifier {
 
 		MoveSpecifier(PieceRef piece_ref, int count, bool avoid_finish) : piece_ref(piece_ref), count(count), avoid_finish(avoid_finish) {
 		}
+
+		friend bool operator==(const MoveSpecifier& a, const MoveSpecifier& b) = default;
 };
 
 class Move : public Action {
@@ -160,7 +175,7 @@ class Move : public Action {
 			}
 
 			Card expected_card = count_to_card.at(move_specifier.count);
-			if (expected_card != card && card != Joker) {
+			if (expected_card != card && !joker) {
 				return false;
 			}
 
@@ -182,6 +197,8 @@ class Move : public Action {
 		bool get_avoid_finish() const {
 			return move_specifier.avoid_finish;
 		}
+
+		friend bool operator==(const Move& a, const Move& b) = default;
 };
 
 class MoveMultiple : public Action {
@@ -199,8 +216,9 @@ class MoveMultiple : public Action {
 		MoveMultiple(Card card, std::vector<MoveSpecifier> move_specifiers) : MoveMultiple(card, move_specifiers, false) {
 		}
 
+		// TODO Check that the same piece is not references more than once in the move list
 		virtual bool is_valid() const {
-			if (card != Seven && card != Joker) {
+			if (card != Seven && !joker) {
 				return false;
 			}
 
@@ -230,6 +248,8 @@ class MoveMultiple : public Action {
 		std::vector<MoveSpecifier> get_move_specifiers() const {
 			return move_specifiers;
 		}
+
+		friend bool operator==(const MoveMultiple& a, const MoveMultiple& b) = default;
 };
 
 class Swap : public Action {
@@ -245,11 +265,11 @@ class Swap : public Action {
 		}
 
 		virtual bool is_valid() const {
-			if (card != Jack && card != Joker) {
+			if (card != Jack && !joker) {
 				return false;
 			}
 
-			if (piece_1 == piece_2) {
+			if (piece_1.player == piece_2.player) {
 				return false;
 			}
 
@@ -266,6 +286,13 @@ class Swap : public Action {
 
 		PieceRef get_piece_2() const {
 			return piece_2;
+		}
+
+		// TODO Use unordered_set so that the default implementation of operator== can be used
+		friend bool operator==(const Swap& a, const Swap& b) {
+			bool in_order_match = (a.piece_1 == b.piece_1) && (a.piece_2 == b.piece_2);
+			bool out_of_order_match = (a.piece_1 == b.piece_2) && (a.piece_1 == b.piece_2);
+			return in_order_match || out_of_order_match;
 		}
 };
 

@@ -10,6 +10,7 @@ class PieceRef {
 		int rank;
 
 		explicit PieceRef(int player, int rank): player(player), rank(rank) {
+			assert(is_valid());
 		}
 
 		explicit PieceRef(int player): player(player), rank(0) {
@@ -27,9 +28,7 @@ class PieceRef {
 			return true;
 		}
 
-		friend bool operator==(const PieceRef& a, const PieceRef& b) {
-			return (a.player == b.player) && (a.rank == b.rank);
-		}
+		friend bool operator==(const PieceRef& a, const PieceRef& b) = default;
 
 		friend std::ostream& operator<<(std::ostream& os, PieceRef const& obj) {
 			  return os << obj.to_str();

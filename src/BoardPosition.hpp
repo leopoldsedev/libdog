@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "Area.hpp"
+#include "Constants.hpp"
 
 
 class BoardPosition {
@@ -12,17 +13,55 @@ class BoardPosition {
 		int idx;
 
 		explicit BoardPosition(Area area, int player, int idx) : area(area), player(player), idx(idx) {
+			assert(is_valid());
 		}
 
 		explicit BoardPosition(int idx) : area(Path), player(-1), idx(idx) {
 		}
 
-		explicit BoardPosition() : area(Path), player(-1), idx(-1) {
+		bool is_valid() const {
+			if (player >= PLAYER_COUNT) {
+				return false;
+			}
+
+			if (area != Path && player < 0) {
+				return false;
+			}
+
+			if (idx < 0) {
+				return false;
+			}
+
+			if (area == Path) {
+				if (idx >= PATH_LENGTH) {
+					return false;
+				}
+			} else if (area == Kennel) {
+				if (idx >= KENNEL_SIZE) {
+					return false;
+				}
+			} else if (area == Finish) {
+				if (idx >= FINISH_LENGTH) {
+					return false;
+				}
+			} else {
+				return false;
+			}
+
+			return true;
 		}
 
 		friend bool operator==(const BoardPosition& a, const BoardPosition& b)
 		{
-			return a.area == b.area && a.player == b.player && a.idx == b.idx;
+			if (a.area != b.area) {
+				return false;
+			}
+
+			if (a.area == Path) {
+				return a.idx == b.idx;
+			} else {
+				return a.player == b.player && a.idx == b.idx;
+			}
 		}
 
 		friend std::ostream& operator<<(std::ostream& os, BoardPosition const& obj) {

@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <utility>
 #include <cassert>
 
 #include "Piece.hpp"
@@ -110,7 +111,8 @@ class BoardState {
 				}
 			}
 
-			return BoardPosition();
+			// A piece reference that contains a valid player and rank always resolves to a piece
+			assert(false);
 		}
 
 		void start_piece(int player) {
@@ -200,12 +202,9 @@ class BoardState {
 		void swap_pieces(PiecePtr& piece1, PiecePtr& piece2) {
 			assert(piece1 != nullptr);
 			assert(piece2 != nullptr);
-			assert(!piece1->blocking);
-			assert(!piece2->blocking);
 
-			PiecePtr temp = std::move(piece1);
-			piece1 = std::move(piece2);
-			piece2 = std::move(temp);
+			std::swap(piece1->position, piece2->position);
+			std::swap(piece1, piece2);
 		}
 
 		int possible_forward_steps_in_finish(int player, int from_finish_idx) {
@@ -223,6 +222,8 @@ class BoardState {
 			for (int i = from_finish_idx + 1; i < FINISH_LENGTH; i++) {
 				if (finish.at(i) == nullptr) {
 					result++;
+				} else {
+					break;
 				}
 			}
 
