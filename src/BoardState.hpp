@@ -200,6 +200,8 @@ class BoardState {
 		void swap_pieces(PiecePtr& piece1, PiecePtr& piece2) {
 			assert(piece1 != nullptr);
 			assert(piece2 != nullptr);
+			assert(!piece1->blocking);
+			assert(!piece2->blocking);
 
 			PiecePtr temp = std::move(piece1);
 			piece1 = std::move(piece2);

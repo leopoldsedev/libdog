@@ -9,24 +9,37 @@
 #include "BoardState.hpp"
 #include "CardsState.hpp"
 #include "Piece.hpp"
-#include "CardPlay.hpp"
 #include "Debug.hpp"
 #include "Util.hpp"
+#include "Action.hpp"
+#include "Notation.hpp"
 
 // TODO Correctly use different ways of specifying pieces/positions (BoardPosition, PieceRef, PiecePtr, path_idx, finish_idx) depending on the minimum needed for any given function
 // TODO Implement giving cards at start of a round
 // TODO Implement throwing away card if player cannot play anything
 
+#define APPEND(x, y) do { \
+	auto b = (y); \
+	(x).insert((x).end(), b.begin(), b.end()); \
+} while(0);
+
 
 class DogGame {
 	public:
+		bool check_turns;
+		bool check_hands;
+
 		int player_turn;
 		int next_hand_size;
 
 		BoardState board_state;
 		CardsState cards_state;
 
-		DogGame() {
+		DogGame() : check_turns(true), check_hands(true) {
+			reset();
+		}
+
+		DogGame(bool check_turns, bool check_hands) : check_turns(check_turns), check_hands(check_hands) {
 			reset();
 		}
 
@@ -82,25 +95,31 @@ class DogGame {
 			player_turn %= PLAYER_COUNT;
 		}
 
-		bool check_common(int player, CardAction& action) {
+		bool check_common(int player, const ActionVar& action) {
 			if (result() >= 0) {
 				// Game is already over
 				return false;
 			}
 
-			if (!play.is_valid()) {
+			if (!action_is_valid(action)) {
 				return false;
 			}
 
-			if (check_turn) {
-				if (play.player != player_turn) {
+			if (check_turns) {
+				if (player != player_turn) {
 					// It needs to be the player's turn
 					return false;
 				}
 			}
 
-			if (check_hand) {
-				bool player_has_card = cards_state.check_player_has_card(play.player, play.card);
+			if (check_hands) {
+				Card card;
+				if (action_is_joker(action)) {
+					card = Joker;
+				} else {
+					card = action_get_card(action);
+				}
+				bool player_has_card = cards_state.check_player_has_card(player, card);
 
 				if (!player_has_card) {
 					// Card being played must be in hand
@@ -108,70 +127,160 @@ class DogGame {
 				}
 			}
 
-			bool legal;
+			return true;
+		}
 
-			if (play.start_card) {
-				legal = start_piece(play.player);
+		void modify_state_common(int player, const ActionVar& action) {
+			cards_state.remove_card_from_hand(player, action_get_card(action));
+
+			next_turn();
+
+			if (cards_state.hands_empty()) {
+				// Round is done, new cards need to be handed out
+				cards_state.hand_out_cards(next_hand_size);
+				next_hand_size = calc_next_hand_size(next_hand_size);
+
+				// Additional increment so that not the same player always starts in every round
+				next_turn();
+			}
+		}
+
+		bool play_notation(int player, std::string notation_str, bool modify_state = true) {
+			optional<ActionVar> action = try_parse_notation(player, notation_str);
+
+			if (action.has_value()) {
+				return play(player, action.value(), modify_state);
 			} else {
-				if (play.card == Seven) {
-					legal = move_multiple_pieces(play.target_pieces, play.into_finish, play.counts, true);
+				return false;
+			}
+		}
 
-					if (legal) {
-						legal = move_multiple_pieces(play.target_pieces, play.into_finish, play.counts, false);
-						assert(legal);
-					}
-				} else if (play.card == Jack) {
-					PiecePtr& piece_1 = board_state.ref_to_piece(play.target_pieces.at(0));
-					PiecePtr& piece_2 = board_state.ref_to_piece(play.target_pieces.at(1));
+		bool play(int player, ActionVar action, bool modify_state = true) {
+			// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
+			if (MATCH(&action, Give, a)) {
+				return try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Discard, a)) {
+				return try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Swap, a)) {
+				return try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Move, a)) {
+				return try_play(player, *a, modify_state);
+			} else if (MATCH(&action, MoveMultiple, a)) {
+				return try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Start, a)) {
+				return try_play(player, *a, modify_state);
+			}
+			assert(false);
+		}
 
-					legal = swap_pieces(piece_1, piece_2, false);
-				} else {
-					int count = play.move_count();
-
-					bool into_finish = play.into_finish.at(0);
-					PiecePtr& piece = board_state.ref_to_piece(play.target_pieces.at(0));
-
-					legal = move_piece(piece, count, into_finish, false, false);
-				}
+		bool try_play(int player, const Give& give, bool modify_state = true) {
+			if (!check_common(player, give)) {
+				return false;
 			}
 
-			if (legal) {
-				player_turn++;
-				player_turn %= PLAYER_COUNT;
+			// TODO
+			std::cout << modify_state;
+			assert(false);
+			return false;
+		}
 
-				cards_state.remove_card_from_hand(play.player, play.card);
+		bool try_play(int player, const Discard& discard, bool modify_state = true) {
+			if (!check_common(player, discard)) {
+				return false;
+			}
 
-				if (cards_state.hands_empty()) {
-					// Round is done, new cards need to be handed out
-					cards_state.hand_out_cards(next_hand_size);
-					next_hand_size = calc_next_hand_size(next_hand_size);
+			// TODO
+			std::cout << modify_state;
+			assert(false);
+			return false;
+		}
 
-					// Additional increment so that not the same player always starts in every round
-					player_turn++;
-				}
+		bool try_play(int player, const Start& start, bool modify_state = true) {
+			if (!check_common(player, start)) {
+				return false;
+			}
+
+			bool legal = start_piece(player, modify_state);
+
+			if (legal && modify_state) {
+				modify_state_common(player, start);
 			}
 
 			return legal;
 		}
 
-		bool start_piece(int player) {
-			PiecePtr& start = board_state.get_start(player);
+		bool try_play(int player, const Move& move, bool modify_state = true) {
+			if (!check_common(player, move)) {
+				return false;
+			}
 
-			if (start != nullptr && start->blocking) {
+			int count = move.get_count();
+			bool avoid_finish = move.get_avoid_finish();
+
+			PiecePtr& piece = board_state.ref_to_piece(move.get_piece_ref());
+
+			bool legal = move_piece(piece, count, avoid_finish, modify_state, false);
+
+			if (legal && modify_state) {
+				modify_state_common(player, move);
+			}
+
+			return legal;
+		}
+
+		bool try_play(int player, const MoveMultiple& move_multiple, bool modify_state = true) {
+			if (!check_common(player, move_multiple)) {
+				return false;
+			}
+
+			bool legal = move_multiple_pieces(move_multiple.get_move_specifiers(), false);
+
+			if (legal && modify_state) {
+				legal = move_multiple_pieces(move_multiple.get_move_specifiers(), true);
+				assert(legal);
+				modify_state_common(player, move_multiple);
+			}
+
+			return legal;
+		}
+
+		bool try_play(int player, const Swap& swap, bool modify_state = true) {
+			if (!check_common(player, swap)) {
+				return false;
+			}
+
+			PiecePtr& piece_1 = board_state.ref_to_piece(swap.get_piece_1());
+			PiecePtr& piece_2 = board_state.ref_to_piece(swap.get_piece_2());
+
+			bool legal = swap_pieces(piece_1, piece_2, modify_state);
+
+			if (legal && modify_state) {
+				modify_state_common(player, swap);
+			}
+
+			return legal;
+		}
+
+		bool start_piece(int player, bool modify_state) {
+			PiecePtr& start_piece = board_state.get_start(player);
+
+			if (start_piece != nullptr && start_piece->blocking) {
 				// Start must not be blocked by a blocking piece
 				return false;
 			}
 
-			if (start != nullptr) {
-				board_state.place_at_kennel(start);
-			}
+			if (modify_state) {
+				if (start_piece != nullptr) {
+					board_state.place_at_kennel(start_piece);
+				}
 
-			board_state.start_piece(player);
+				board_state.start_piece(player);
+			}
 
 			return true;
 		}
 
-		bool move_piece(PiecePtr& piece, int count, bool into_finish, bool legal_check, bool remove_all_on_way) {
+		bool move_piece(PiecePtr& piece, int count, bool avoid_finish, bool modify_state, bool remove_all_on_way) {
 			if (piece == nullptr) {
 				return false;
 			}
@@ -186,16 +295,16 @@ class DogGame {
 
 			if (piece->position.area == Path) {
 				/* Possibilities
-				   into_finish   Finish   Path      outcome
+				   avoid_finish  Finish   Path      outcome
 				   ----------------------------------------
-				   true          free     free      enter finish
-				   true          free     blocked   enter finish      <-- not possible in game
-				   true          blocked  free      continue on path
-				   true          blocked  blocked   illegal
-				   false         free     free      continue on path
-				   false         free     blocked   illegal           <-- not possible in game
+				   false         free     free      enter finish
+				   false         free     blocked   enter finish      <-- not possible in game
 				   false         blocked  free      continue on path
 				   false         blocked  blocked   illegal
+				   true          free     free      continue on path
+				   true          free     blocked   illegal           <-- not possible in game
+				   true          blocked  free      continue on path
+				   true          blocked  blocked   illegal
 				*/
 				BoardPosition path_position_result;
 				BoardPosition finish_position_result;
@@ -205,7 +314,7 @@ class DogGame {
 				bool finish_free = try_enter_finish(piece->player, piece->position.idx, count, piece->blocking, finish_position_result, finish_count_on_path);
 
 				// Table above can be summarized in this if-chain
-				if (into_finish && finish_free) {
+				if (!avoid_finish && finish_free) {
 					position_result = finish_position_result;
 					count_on_path = finish_count_on_path;
 				} else if (path_free) {
@@ -221,7 +330,7 @@ class DogGame {
 				if (!legal) return false;
 			}
 
-			if (!legal_check) {
+			if (modify_state) {
 				// Change board state
 				if (remove_all_on_way) {
 					assert(count_on_path > 0);
@@ -241,10 +350,15 @@ class DogGame {
 			return true;
 		}
 
+		int calc_steps_into_finish(int player, int from_path_idx, int count, bool piece_blocking, int& count_on_path_result) {
+			count_on_path_result = BoardState::calc_steps_on_path(player, from_path_idx, piece_blocking, count, true);
+			int steps_into_finish = count - count_on_path_result;
+			return steps_into_finish;
+		}
+
 		bool try_enter_finish(int player, int from_path_idx, int count, bool piece_blocking, BoardPosition& position_result, int& count_on_path_result) {
-			int steps_on_path = BoardState::calc_steps_on_path(player, from_path_idx, piece_blocking, count, true);
-			count_on_path_result = steps_on_path;
-			int steps_into_finish = count - steps_on_path;
+			int steps_into_finish = calc_steps_into_finish(player, from_path_idx, count, piece_blocking, count_on_path_result);
+			int& steps_on_path = count_on_path_result;
 
 			if (steps_on_path != 0) {
 				bool legal = check_move_on_path(from_path_idx, steps_on_path, position_result);
@@ -308,16 +422,18 @@ class DogGame {
 			return true;
 		}
 
-		bool move_multiple_pieces(std::vector<PieceRef> target_pieces, std::vector<bool> into_finishes, std::vector<int> counts, bool legal_check) {
+		bool move_multiple_pieces(std::vector<MoveSpecifier> move_actions, bool modify_state) {
 			bool legal = true;
 
-			for (std::size_t i = 0; i < target_pieces.size(); i++) {
-				bool into_finish = into_finishes.at(i);
-				PiecePtr& piece = board_state.ref_to_piece(target_pieces.at(i));
-				int count = counts.at(i);
+			for (std::size_t i = 0; i < move_actions.size(); i++) {
+				MoveSpecifier move_action = move_actions.at(i);
+
+				PiecePtr& piece = board_state.ref_to_piece(move_action.piece_ref);
+				int count = move_action.count;
+				bool avoid_finish = move_action.avoid_finish;
 
 				// TODO Somehow pass the list of remaining pieces to check that they would not be moved to kennel by this move (to avoid pieces that are in the target_pieces list being moved to kennel before they are being moved)
-				legal = move_piece(piece, count, into_finish, legal_check, true);
+				legal = move_piece(piece, count, avoid_finish, modify_state, true);
 
 				if (!legal) {
 					break;
@@ -327,7 +443,7 @@ class DogGame {
 			return legal;
 		}
 
-		bool swap_pieces(PiecePtr& piece_1, PiecePtr& piece_2, bool legal_check) {
+		bool swap_pieces(PiecePtr& piece_1, PiecePtr& piece_2, bool modify_state) {
 			if (piece_1 == nullptr || piece_2 == nullptr) {
 				return false;
 			}
@@ -336,17 +452,91 @@ class DogGame {
 				return false;
 			}
 
-			if (!legal_check) {
+			if (modify_state) {
 				board_state.swap_pieces(piece_1, piece_2);
 			}
 
 			return true;
 		}
 
+		std::vector<ActionVar> possible_starts(int player, Card card, bool is_joker) {
+			std::vector<ActionVar> result;
+
+			Start start(card, is_joker);
+
+			bool legal = try_play(player, start, false);
+			if (legal) {
+				result.push_back(start);
+			}
+
+			return result;
+		}
+
+		std::vector<ActionVar> possible_moves(int player, Card card, int count, bool is_joker) {
+			std::vector<ActionVar> result;
+
+			for (int i = 0; i < PIECE_COUNT; i++) {
+				PieceRef piece_ref(player, i);
+				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
+				if (piece->position.area != Path) {
+					continue;
+				}
+				Move move(card, piece_ref, count, false, is_joker);
+
+				bool legal = try_play(player, move, false);
+				if (legal) {
+					result.push_back(move);
+				}
+
+				// Check if avoid_finish flag would have an effect
+				int count_on_path_result;
+				int steps_into_finish = calc_steps_into_finish(player, piece->position.idx, count, piece->blocking, count_on_path_result);
+
+				if (steps_into_finish > 0) {
+					move = Move(card, piece_ref, count, true, is_joker);
+
+					legal = try_play(player, move, false);
+					if (legal) {
+						result.push_back(move);
+					}
+				}
+			}
+
+			return result;
+		}
+
+		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker) {
+			std::vector<ActionVar> result;
+
+			// TODO
+			std::cout << player << card << count << is_joker;
+
+			return result;
+		}
+
+		std::vector<ActionVar> possible_swaps(int player, Card card, bool is_joker) {
+			std::vector<ActionVar> result;
+
+			for (int i = 0; i < PIECE_COUNT; i++) {
+				for (int j = 0; i < PLAYER_COUNT; i++) {
+					for (int k = 0; i < PIECE_COUNT; i++) {
+						Swap swap(card, PieceRef(player, i), PieceRef(j, k), is_joker);
+
+						bool legal = try_play(player, swap, false);
+						if (legal) {
+							result.push_back(swap);
+						}
+					}
+				}
+			}
+
+			return result;
+		}
+
 		// TODO Add action to give card to team mate
 		// TODO Add action to throw away a card when the player cannot play any card
-		std::vector<CardPlay> possible_actions(int player) {
-			std::vector<CardPlay> result;
+		std::vector<ActionVar> possible_actions(int player) {
+			std::vector<ActionVar> result;
 
 			std::vector<Card> cards;
 
@@ -355,8 +545,8 @@ class DogGame {
 			if (has_joker) {
 				for (int i = Ace; i != Joker; i++) {
 					Card card = static_cast<Card>(i);
-					std::vector<CardPlay> plays = possible_actions_for_card(player, card, true);
-					result.insert(result.end(), plays.begin(), plays.end());
+					std::vector<ActionVar> actions = possible_actions_for_card(player, card, true);
+					APPEND(result, actions);
 				}
 			}
 
@@ -368,191 +558,55 @@ class DogGame {
 			cards.erase(unique(cards.begin(), cards.end()), cards.end());
 
 			for (Card card : cards) {
-				std::vector<CardPlay> plays = possible_actions_for_card(player, card, false);
-				result.insert(result.end(), plays.begin(), plays.end());
+				std::vector<ActionVar> actions = possible_actions_for_card(player, card, false);
+				APPEND(result, actions);
 			}
 
 			return result;
 		}
 
 		// TODO Split into multiple function, remove code duplication, make more efficient
-		std::vector<CardPlay> possible_actions_for_card(int player, Card card, bool is_joker) {
+		std::vector<ActionVar> possible_actions_for_card(int player, Card card, bool is_joker) {
 			if (card == None || card == Joker) {
 				return {};
 			}
 
-			std::vector<CardPlay> result;
-			bool legal;
-			CardPlay play;
+			std::vector<ActionVar> result;
+
+			// TODO This is a rather crude way of not checking hands. Add parameter to try_play() instead
+			bool check_hands_state = check_hands;
+			check_hands = false;
 
 			switch (card) {
 				case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
-					for (int i = 0; i < PIECE_COUNT; i++) {
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(true);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(false);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-					}
+					APPEND(result, possible_moves(player, card, simple_card_get_count(card), is_joker));
 					break;
 				case Ace:
-					play = CardPlay(player, card);
-					play.start_card = true;
-					play.is_joker = is_joker;
-					legal = play_card(play, false, false, true);
-					if (legal) {
-						result.push_back(play);
-					}
-
-					for (int i = 0; i < PIECE_COUNT; i++) {
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(true);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(false);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(true);
-						play.alt_action = true;
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(false);
-						play.alt_action = true;
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-					}
+					APPEND(result, possible_starts(player, card, is_joker));
+					APPEND(result, possible_moves(player, card, 1, is_joker));
+					APPEND(result, possible_moves(player, card, 11, is_joker));
 					break;
 				case Four:
-					for (int i = 0; i < PIECE_COUNT; i++) {
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(true);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(false);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(true);
-						play.alt_action = true;
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-					}
+					APPEND(result, possible_moves(player, card, -4, is_joker));
+					APPEND(result, possible_moves(player, card, 4, is_joker));
 					break;
 				case Seven:
-					// TODO
+					APPEND(result, possible_move_multiples(player, card, 7, is_joker));
 					break;
 				case Jack:
-					for (int i = 0; i < PIECE_COUNT; i++) {
-						for (int j = 0; i < PLAYER_COUNT; i++) {
-							for (int k = 0; i < PIECE_COUNT; i++) {
-								play = CardPlay(player, card);
-								play.target_pieces.push_back(PieceRef(player, i));
-								play.target_pieces.push_back(PieceRef(j, k));
-								play.is_joker = is_joker;
-
-								legal = play_card(play, false, false, true);
-								if (legal) {
-									result.push_back(play);
-								}
-							}
-						}
-					}
+					APPEND(result, possible_swaps(player, card, is_joker));
 					break;
 				case King:
-					play = CardPlay(player, card);
-					play.start_card = true;
-					play.is_joker = is_joker;
-
-					legal = play_card(play, false, false, true);
-					if (legal) {
-						result.push_back(play);
-					}
-
-					for (int i = 0; i < PIECE_COUNT; i++) {
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(true);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-
-						play = CardPlay(player, card);
-						play.target_pieces.push_back(PieceRef(player, i));
-						play.into_finish.push_back(false);
-						play.is_joker = is_joker;
-
-						legal = play_card(play, false, false, true);
-						if (legal) {
-							result.push_back(play);
-						}
-					}
+					APPEND(result, possible_starts(player, card, is_joker));
+					APPEND(result, possible_moves(player, card, 13, is_joker));
 					break;
 				case Joker:
 				case None:
 				default:
 					break;
 			}
+
+			check_hands = check_hands_state;
 
 			return result;
 		}

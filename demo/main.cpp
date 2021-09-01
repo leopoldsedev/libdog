@@ -6,6 +6,7 @@
 
 #include "DogGame.hpp"
 #include "CardPlay.hpp"
+#include "Notation.hpp"
 
 #define sleep(x) (std::this_thread::sleep_for(std::chrono::milliseconds(x)))
 
@@ -20,11 +21,11 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 		std::cout << game << std::endl;
 		std::cout << "player " << game.player_turn << "'s turn" << std::endl;
 
-		std::vector<CardPlay> plays = game.possible_actions(game.player_turn);
+		std::vector<ActionVar> plays = game.possible_actions(game.player_turn);
 
 		for (std::size_t i = 0; i < plays.size(); i++) {
-			CardPlay play = plays.at(i);
-			std::cout << i << ": " << play.get_notation(game.player_turn) << std::endl;
+			ActionVar play = plays.at(i);
+			std::cout << i << ": " << to_notation(game.player_turn, play) << std::endl;
 		}
 
 		std::size_t selection;
@@ -32,7 +33,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 			std::cin >> selection;
 		} while (selection >= plays.size());
 
-		bool legal = game.play_card(plays.at(selection), true, true, false);
+		bool legal = game.play(game.player_turn, plays.at(selection));
 		assert(legal);
 	}
 
