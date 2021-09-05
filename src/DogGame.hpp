@@ -1,9 +1,11 @@
 #pragma once
 
 #include <iostream>
+#include <algorithm>
 #include <sstream>
 #include <array>
 #include <memory>
+#include <vector>
 #include <cassert>
 
 #include "BoardState.hpp"
@@ -442,12 +444,8 @@ class DogGame {
 				bool backwards = count < 0;
 				assert(!backwards);
 
-				// TODO This assert is a guess, remove following if if it is valid. reason: calc_steps_on_path() call already handles this case.
-				assert(!(steps_on_path == 0 && piece_blocking));
-				if (steps_on_path == 0 && piece_blocking) {
-					// Piece has to touch start twice
-					return false;
-				}
+				// The calc_steps_into_finish() call already makes sure that this case is impossible here
+				assert(!(steps_on_path == 0 && piece_blocking)); // Piece cannot go into finish while it is blocking
 
 				// In this check position index "-1" in the finish represents the position right before the finish
 				bool legal = check_move_in_finish(player, -1, steps_into_finish, position_result);
@@ -457,10 +455,100 @@ class DogGame {
 			return true;
 		}
 
+		int possible_forward_steps_in_finish(int player, int from_finish_idx) {
+			std::array<PiecePtr, FINISH_LENGTH>& finish = board_state.finishes.at(player);
+
+			int result = 0;
+
+			if (from_finish_idx < -1) {
+				result = -from_finish_idx - 1;
+				from_finish_idx = -1;
+			}
+
+			assert(from_finish_idx >= -1);
+
+			for (int i = from_finish_idx + 1; i < FINISH_LENGTH; i++) {
+				if (finish.at(i) == nullptr) {
+					result++;
+				} else {
+					break;
+				}
+			}
+
+			return result;
+		}
+
+		int possible_forward_steps_on_path(int from_path_idx, bool backwards) {
+			int step = backwards ? -1 : 1;
+
+			int result = 0;
+			int limit = backwards ? -PATH_LENGTH : PATH_LENGTH;
+
+			// TODO Loop could be made faster by going in increments of PATH_SECTION_LENGTH
+			for (int i = 0; i != limit; i += step) {
+				int path_idx = positive_mod(from_path_idx + step + i, PATH_LENGTH);
+
+				if (path_idx == from_path_idx) {
+					continue;
+				}
+
+				PiecePtr& piece = board_state.get_piece(BoardPosition(path_idx));
+
+				if (piece != nullptr && piece->blocking) {
+					break;
+				}
+
+				result++;
+			}
+
+			return result;
+		}
+
+		int possible_steps_of_piece(int player, BoardPosition position, bool piece_blocking, bool backwards) {
+			if (position.area == Path) {
+				int steps_on_path = possible_forward_steps_on_path(position.idx, backwards);
+				int steps_possible = steps_on_path;
+
+				if (!backwards) {
+					int steps_on_path_if_finish = BoardState::calc_steps_on_path(player, position.idx, piece_blocking, PATH_LENGTH, true);
+					int steps_into_finish = possible_forward_steps_in_finish(player, -1);
+					steps_possible = steps_on_path_if_finish + steps_into_finish;
+				}
+
+				return steps_possible;
+			} else if (position.area == Finish) {
+				if (backwards) {
+					// Cannot move backwards in Kennel
+					return 0;
+				}
+
+				return possible_forward_steps_in_finish(player, position.idx);
+			} else if (position.area == Kennel) {
+				// Cannot move in Kennel
+				return 0;
+			} else {
+				assert(false);
+			}
+		}
+
+		bool check_block(int from_path_idx, int count) {
+			bool backwards = (count < 0);
+
+			int possible_steps = possible_forward_steps_on_path(from_path_idx, backwards);
+
+			if (backwards) {
+				count *= -1;
+			}
+
+			bool blocked = (count > possible_steps);
+
+			return blocked;
+		}
+
 		bool check_move_on_path(int from_path_idx, int count, BoardPosition& position_result) {
 			int target_path_idx = positive_mod(from_path_idx + count, PATH_LENGTH);
 
-			bool blocked = board_state.check_block(from_path_idx, count);
+			bool blocked = check_block(from_path_idx, count);
 			if (blocked) {
 				// Piece cannot leapfrog another piece that is blocking
 				return false;
@@ -479,7 +567,7 @@ class DogGame {
 				return false;
 			}
 
-			int steps_possible = board_state.possible_forward_steps_in_finish(player, from_finish_idx);
+			int steps_possible = possible_forward_steps_in_finish(player, from_finish_idx);
 
 			if (steps_possible < count) {
 				// Piece cannot go further than length of finish
@@ -597,22 +685,81 @@ class DogGame {
 				if (piece->position.area == Path) {
 					// Check if avoid_finish flag would have an effect
 					int count_on_path_result;
-					// TODO These are essentially the same checks as in try_enter_finish(). Maybe move this functionality into a new function
-					int steps_into_finish = calc_steps_into_finish(player, piece->position.idx, count, piece->blocking, count_on_path_result);
+					// TODO This is not a good initialization
+					BoardPosition position_result = BoardPosition(0);
+					legal = try_enter_finish(player, piece->position.idx, count, piece->blocking, position_result, count_on_path_result);
+					assert(legal);
 
-					if (steps_into_finish > 0) {
-						BoardPosition position_result = BoardPosition(0);
-						// In this check position index "-1" in the finish represents the position right before the finish
-						bool legal = check_move_in_finish(player, -1, steps_into_finish, position_result);
+					if (position_result.area == Finish) {
+						// avoid_finish flag would have an effect -> add it as possible action if it is legal (i.e. if the path isn't blocked)
+						move = Move(card, piece_ref, count, true, is_joker);
+
+						legal = try_play(player, move, false);
 						if (legal) {
-							move = Move(card, piece_ref, count, true, is_joker);
-
-							legal = try_play(player, move, false);
-							if (legal) {
-								result.push_back(move);
-							}
+							result.push_back(move);
 						}
 					}
+				}
+			}
+
+			return result;
+		}
+
+		// TODO Add parameter for max count per piece to avoid branching that will inevitably result in illegal moves
+		std::vector<ActionVar> _possible_move_multiples(int player, Card card, int count, bool is_joker, std::vector<std::tuple<PieceRef, int>> pieces, std::vector<MoveSpecifier> move_specifiers) {
+			assert(pieces.size() > 0);
+
+			std::vector<ActionVar> result;
+
+			PieceRef piece_ref = std::get<0>(pieces.back());
+			int max_count = std::get<1>(pieces.back());
+
+			if (pieces.size() == 1) {
+				std::vector<MoveSpecifier> move_specifiers_extended = move_specifiers;
+				MoveSpecifier move_specifier(piece_ref, count, false);
+				if (count > 0) {
+					move_specifiers_extended.insert(move_specifiers_extended.begin(), move_specifier);
+				}
+				assert(move_specifiers_extended.size() > 0);
+				MoveMultiple move_mult(card, move_specifiers_extended);
+				assert(action_is_valid(move_mult));
+
+				result.push_back(move_mult);
+
+				return result;
+			}
+
+			pieces.pop_back();
+
+			for (int i = 0; i <= std::min(count, max_count); i++) {
+				std::vector<MoveSpecifier> move_specifiers_extended = move_specifiers;
+
+				MoveSpecifier move_specifier(piece_ref, i, false);
+				if (i > 0) {
+					move_specifiers_extended.insert(move_specifiers_extended.begin(), move_specifier);
+				}
+
+				std::vector<ActionVar> moves = _possible_move_multiples(player, card, count - i, is_joker, pieces, move_specifiers_extended);
+				APPEND(result, moves);
+
+				int count_on_path_result;
+				// TODO This is not a good initialization
+				BoardPosition position_result = BoardPosition(0);
+				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
+				bool legal = try_enter_finish(player, piece->position.idx, i, piece->blocking, position_result, count_on_path_result);
+				assert(legal);
+
+				if (position_result.area == Finish) {
+					// avoid_finish flag would have an effect -> continue recursion tree (move should be legal since blocked path is avoided by the max_counts)
+					move_specifiers_extended = move_specifiers;
+
+					move_specifier.avoid_finish = true;
+					if (i > 0) {
+						move_specifiers_extended.insert(move_specifiers_extended.begin(), move_specifier);
+					}
+
+					moves = _possible_move_multiples(player, card, count - i, is_joker, pieces, move_specifiers_extended);
+					APPEND(result, moves);
 				}
 			}
 
@@ -622,20 +769,25 @@ class DogGame {
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker) {
 			std::vector<ActionVar> result;
 
-			// TODO Implement as recursive function. Something like:
-			/*
-			get_seven_splits(int count, std::vector<PieceRef> pieces, std::vector<int> max_count) {
-				if (count == 0) {
-					return {};
-				}
-				result = {};
-				for (int i = 0; i < first_max_count; i++) {
-					splits = get_seven_splits(count - 1, pieces_without_first, max_count_without_first);
-					result.append(splits);
-				}
+			std::vector<PieceRef> piece_refs;
+
+			APPEND(piece_refs, board_state.get_pieces_in_area(player, Path));
+			APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Path));
+
+			if (piece_refs.size() == 0) {
+				return {};
 			}
-			*/
-			std::cout << player << card << count << is_joker;
+
+			std::vector<std::tuple<PieceRef, int>> pieces_with_max_counts;
+
+			for (PieceRef piece_ref : piece_refs) {
+				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
+				int max_count = possible_steps_of_piece(piece_ref.player, piece->position, piece->blocking, false);
+
+				pieces_with_max_counts.push_back(std::make_tuple(piece_ref, max_count));
+			}
+
+			result = _possible_move_multiples(player, card, count, is_joker, pieces_with_max_counts, {});
 
 			return result;
 		}
@@ -665,10 +817,11 @@ class DogGame {
 			std::vector<Card> cards;
 
 			// Process joker card if in hand
-			bool has_joker = cards_state.get_hand(player).has_card(Joker);
+			bool has_joker = cards_state.check_player_has_card(player, Joker);
 			if (has_joker) {
 				for (int i = Ace; i != Joker; i++) {
 					Card card = static_cast<Card>(i);
+					// TODO Switch player to team mate if player is already done
 					std::vector<ActionVar> actions = possible_actions_for_card(player, card, true);
 					APPEND(result, actions);
 				}
@@ -682,6 +835,7 @@ class DogGame {
 			cards.erase(unique(cards.begin(), cards.end()), cards.end());
 
 			for (Card card : cards) {
+				// TODO Switch player to team mate if player is already done
 				std::vector<ActionVar> actions = possible_actions_for_card(player, card, false);
 				APPEND(result, actions);
 			}

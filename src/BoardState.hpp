@@ -207,51 +207,6 @@ class BoardState {
 			std::swap(piece1, piece2);
 		}
 
-		int possible_forward_steps_in_finish(int player, int from_finish_idx) {
-			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
-
-			int result = 0;
-
-			if (from_finish_idx < -1) {
-				result = -from_finish_idx - 1;
-				from_finish_idx = -1;
-			}
-
-			assert(from_finish_idx >= -1);
-
-			for (int i = from_finish_idx + 1; i < FINISH_LENGTH; i++) {
-				if (finish.at(i) == nullptr) {
-					result++;
-				} else {
-					break;
-				}
-			}
-
-			return result;
-		}
-
-		bool check_block(int from_path_idx, int count) {
-			bool backwards = (count < 0);
-			int step = backwards ? -1 : 1;
-
-			// TODO Loop can be stopped early if i < or > +-PATH_LENGTH, it could also be made faster by going in increments of PATH_SECTION_LENGTH
-			for (int i = 0; i != count; i += step) {
-				int path_idx = positive_mod(from_path_idx + step + i, PATH_LENGTH);
-
-				if (path_idx == from_path_idx) {
-					continue;
-				}
-
-				PiecePtr& piece = get_piece(BoardPosition(path_idx));
-
-				if (piece != nullptr && piece->blocking) {
-					return true;
-				}
-			}
-
-			return false;
-		}
-
 		bool check_finish_full(int player) {
 			std::array<PiecePtr, FINISH_LENGTH>& finish = finishes.at(player);
 
@@ -262,6 +217,21 @@ class BoardState {
 			}
 
 			return true;
+		}
+
+		std::vector<PieceRef> get_pieces_in_area(int player, Area area) {
+			std::vector<PieceRef> result;
+
+			for (std::size_t i = 0; i < PIECE_COUNT; i++) {
+				PieceRef piece_ref(player, i);
+				PiecePtr& piece = ref_to_piece(piece_ref);
+
+				if (piece->position.area == area) {
+					result.push_back(piece_ref);
+				}
+			}
+
+			return result;
 		}
 
 		static int get_start_path_idx(int player) {

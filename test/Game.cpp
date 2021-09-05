@@ -431,6 +431,8 @@ TEST(CardTest, Seven) {
 	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
 	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
 
+	// TODO Add test cases for illegal moves
+
 	game.reset();
 	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 0)), BoardPosition(4));
 	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(0, 1)), BoardPosition(6));
@@ -543,32 +545,6 @@ TEST(CardTest, MoveInFinish) {
 	EXPECT_PLAYER_AT(49, player);
 }
 
-// TODO Remove
-//bool action_lists_contains(std::vector<ActionVar> list, ActionVar e) {
-//    for (ActionVar action : list) {
-//        if (action == e) {
-//            return true;
-//        }
-//    }
-//
-//    return false;
-//}
-//
-//bool action_lists_eq(std::vector<ActionVar> list1, std::vector<ActionVar> list2) {
-//    if (list1.size() != list2.size()) {
-//        return false;
-//    }
-//
-//    for (ActionVar action : list1) {
-//        bool contains = action_lists_contains(list2, action);
-//        if (!contains) {
-//            return false;
-//        }
-//    }
-//
-//    return true;
-//}
-
 TEST(PossibleAction, MoveInFinish) {
 	DogGame game(false, false);
 	std::vector<ActionVar> actions;
@@ -616,6 +592,10 @@ TEST(PossibleAction, MoveInFinish) {
 	EXPECT_EQ(actions.size(), 2);
 	EXPECT_THAT(actions, testing::Contains(from_notation(player, "A'3")));
 	EXPECT_THAT(actions, testing::Contains(from_notation(player, "A3")));
+}
+
+TEST(PossibleAction, AvoidFinish) {
+	GTEST_SKIP();
 }
 
 TEST(PossibleAction, Swap) {
@@ -720,6 +700,123 @@ TEST(PossibleAction, Swap) {
 	EXPECT_THAT(actions, testing::Contains(from_notation(2, "J000")));
 	EXPECT_THAT(actions, testing::Contains(from_notation(2, "J011")));
 	EXPECT_THAT(actions, testing::Contains(from_notation(2, "J001")));
+}
+
+TEST(PossibleAction, SevenSimple) {
+	GTEST_SKIP();
+
+	DogGame game(false, false);
+	std::vector<ActionVar> actions;
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 0);
+
+	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 0)), BoardPosition(17));
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 1);
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 07")));
+
+	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 1)), BoardPosition(1));
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 8);
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 07")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 06 11")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 05 12")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 13")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 14")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 15")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 16")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 17")));
+
+	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 2, 0)), BoardPosition(33));
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 36);
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'7")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 11 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 12 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 13 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 14 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 15 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 16 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 17")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 11 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 12 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 13 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 14 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 15 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 16")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 11 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 12 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 13 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 14 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 15")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 11 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 12 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 13 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 14")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 11 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 12 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 13")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 05 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 05 11 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 05 12")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 06 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 06 11")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 07")));
+}
+
+TEST(PossibleAction, SevenBlockades) {
+	GTEST_SKIP();
+
+	DogGame game(false, false);
+	std::vector<ActionVar> actions;
+
+	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 0)), BoardPosition(12));
+	game.board_state.start_piece(1);
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 0);
+
+	game.board_state.start_piece(2);
+
+	PRINT_DBG(game);
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 4);
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'7")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 0'4")));
+
+	game.reset();
+
+	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 0)), BoardPosition(28));
+	game.board_state.start_piece(6);
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'7")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'2 05")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'1 06")));
 }
 
 TEST(FullGameTest, WinCondition) {
