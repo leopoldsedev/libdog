@@ -9,6 +9,7 @@
 
 #define IS_ACTION(x, t) (std::holds_alternative<t>(x))
 
+// TODO Are these CONCAT macros really needed?
 #define CONCAT(a, b) CONCAT_INNER(a, b)
 #define CONCAT_INNER(a, b) a ## b
 

@@ -288,7 +288,8 @@ optional<ActionVar> notation_parse_card_play(int player, Card card, string notat
 }
 
 ActionVar from_notation(int player, string notation_str) {
-	return try_parse_notation(player, notation_str).value();
+	optional<ActionVar> action_opt = try_parse_notation(player, notation_str);
+	return action_opt.value();
 }
 
 // TODO Extend notation so that ommitting the digit for forward moving cards implies piece rank of 0
@@ -437,6 +438,142 @@ std::string to_notation(int player, ActionVar action) {
 		ss << notation_move_multiple(player, *a);
 	} else if (MATCH(&action, Swap, a)) {
 		ss << notation_swap(player, *a);
+	}
+
+	return ss.str();
+}
+
+BoardState from_notation(string notation_str) {
+	optional<BoardState> board_opt = try_parse_notation(notation_str);
+	return board_opt.value();
+}
+
+optional<BoardState> try_parse_notation(string notation_str) {
+	// TODO remove code duplication
+	// Remove all whitespace from string
+	// Source: https://stackoverflow.com/a/83538/3118787
+	notation_str.erase(remove_if(notation_str.begin(), notation_str.end(), ::isspace), notation_str.end());
+
+	regex regex_outer(R"((^|\|?([FP]\d{1,2}\*?)*)*)");
+	regex regex_inner_1(R"((^|\|)(([FP]\d{1,2}\*?)*))");
+	regex regex_inner_2(R"(([FP])(\d{1,2})(\*?))");
+	smatch matches;
+
+	bool match = regex_match(notation_str, matches, regex_outer);
+
+	if (!match) {
+		return nullopt;
+	}
+
+	BoardState result;
+
+	sregex_iterator iter_inner_1;
+	sregex_iterator end_inner_1 = sregex_iterator();
+	iter_inner_1 = sregex_iterator(notation_str.begin(), notation_str.end(), regex_inner_1);
+
+	int player = 0;
+
+	for(; iter_inner_1 != end_inner_1; iter_inner_1++) {
+		if (player >= PLAYER_COUNT) {
+			// The notation string had too many pipe separators ('|')
+			return nullopt;
+		}
+
+		string player_str = iter_inner_1->str(0);
+
+		sregex_iterator iter_inner_2;
+		sregex_iterator end_inner_2 = sregex_iterator();
+		iter_inner_2 = sregex_iterator(player_str.begin(), player_str.end(), regex_inner_2);
+
+		int piece_cnt = 0;
+
+		for(; iter_inner_2 != end_inner_2; iter_inner_2++) {
+			if (piece_cnt >= PIECE_COUNT) {
+				// Position of more pieces specified than there exist
+				return nullopt;
+			}
+
+			string area_str = iter_inner_2->str(1);
+			int idx = stoi(iter_inner_2->str(2));
+			bool blocking = (iter_inner_2->str(3) == "*");
+
+			// TODO Is is not a good initialization
+			BoardPosition position = BoardPosition(0);
+			if (area_str == "P") {
+				if (idx >= PATH_LENGTH) {
+					// Invalid path index
+					return nullopt;
+				}
+				position = BoardPosition(idx);
+			} else if (area_str == "F") {
+				if (idx >= FINISH_LENGTH) {
+					// Invalid finish index
+					return nullopt;
+				}
+				position = BoardPosition(Finish, player, idx);
+			} else {
+				// Should never happen in regex matched
+				assert(false);
+			}
+
+			if (result.get_piece(position) != nullptr) {
+				// There is already a piece specified for this position
+				return nullopt;
+			}
+
+			PiecePtr* piece = nullptr;
+			bool success = result.get_kennel_piece(player, &piece);
+			assert(success);
+
+			result.move_piece(*piece, position, blocking);
+
+			piece_cnt++;
+		}
+
+		player++;
+	}
+
+	if (player != PLAYER_COUNT) {
+		// The notation string did not have the correct amount of pipe separators ('|')
+		return nullopt;
+	}
+
+	return result;
+}
+
+std::string board_notation_player(BoardState board, int player) {
+	std::stringstream ss;
+
+	for (std::size_t i = 0; i < board.path.size(); i++) {
+		PiecePtr& piece = board.path.at(i);
+		if (piece != nullptr && piece->player == player) {
+			ss << "P" << i;
+			if (piece->blocking) {
+				ss << "*";
+			}
+		}
+	}
+
+	for (std::size_t i = 0; i < board.finishes.at(player).size(); i++) {
+		PiecePtr& piece = board.finishes.at(player).at(i);
+		if (piece != nullptr && piece->player == player) {
+			ss << "F" << i;
+		}
+	}
+
+	return ss.str();
+}
+
+std::string to_notation(const BoardState board) {
+	std::stringstream ss;
+
+	int player = 0;
+	ss << board_notation_player(board, 0);
+	player++;
+
+	for (; player < PLAYER_COUNT; player++) {
+		ss << "|";
+		ss << board_notation_player(board, player);
 	}
 
 	return ss.str();

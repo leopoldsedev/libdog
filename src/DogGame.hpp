@@ -63,6 +63,10 @@ class DogGame {
 			give_buffer.fill(None);
 		}
 
+		void load_board(std::string notation_str) {
+			board_state = from_notation(notation_str);
+		}
+
 		// -1 ... undecided (game not concluded yet)
 		//  0 ... team of player 0 won
 		//  1 ... team of player 1 won
@@ -272,7 +276,7 @@ class DogGame {
 				return false;
 			}
 
-			bool legal = start_piece(player, modify_state);
+			bool legal = board_state.start_piece(player, modify_state);
 
 			if (legal && modify_state) {
 				modify_state_common(player, start);
@@ -291,7 +295,7 @@ class DogGame {
 
 			PiecePtr& piece = board_state.ref_to_piece(move.get_piece_ref());
 
-			bool legal = move_piece(piece, count, avoid_finish, modify_state, false);
+			bool legal = board_state.move_piece(piece, count, avoid_finish, modify_state, false);
 
 			if (legal && modify_state) {
 				modify_state_common(player, move);
@@ -305,11 +309,9 @@ class DogGame {
 				return false;
 			}
 
-			bool legal = move_multiple_pieces(move_multiple.get_move_specifiers(), false);
+			bool legal = board_state.move_multiple_pieces(move_multiple.get_move_specifiers(), modify_state);
 
 			if (legal && modify_state) {
-				legal = move_multiple_pieces(move_multiple.get_move_specifiers(), true);
-				assert(legal);
 				modify_state_common(player, move_multiple);
 			}
 
@@ -324,305 +326,13 @@ class DogGame {
 			PiecePtr& piece_1 = board_state.ref_to_piece(swap.get_piece_1());
 			PiecePtr& piece_2 = board_state.ref_to_piece(swap.get_piece_2());
 
-			bool legal = swap_pieces(piece_1, piece_2, modify_state);
+			bool legal = board_state.swap_pieces(piece_1, piece_2, modify_state);
 
 			if (legal && modify_state) {
 				modify_state_common(player, swap);
 			}
 
 			return legal;
-		}
-
-		bool start_piece(int player, bool modify_state) {
-			PiecePtr& start_piece = board_state.get_start(player);
-
-			if (start_piece != nullptr && start_piece->blocking) {
-				// Start must not be blocked by a blocking piece
-				return false;
-			}
-
-			if (modify_state) {
-				if (start_piece != nullptr) {
-					board_state.place_at_kennel(start_piece);
-				}
-
-				board_state.start_piece(player);
-			}
-
-			return true;
-		}
-
-		bool move_piece(PiecePtr& piece, int count, bool avoid_finish, bool modify_state, bool remove_all_on_way) {
-			if (piece == nullptr) {
-				return false;
-			}
-
-			// TODO This is not a good initialization
-			BoardPosition position_result = BoardPosition(0);
-			int count_on_path = 0;
-
-			if (piece->position.area == Kennel) {
-				// Moving in kennel is not possible
-				return false;
-			}
-
-			if (piece->position.area == Path) {
-				/* Possibilities
-				   avoid_finish  Finish   Path      outcome
-				   ----------------------------------------
-				   false         free     free      enter finish
-				   false         free     blocked   enter finish      <-- not possible in game
-				   false         blocked  free      continue on path
-				   false         blocked  blocked   illegal
-				   true          free     free      continue on path
-				   true          free     blocked   illegal           <-- not possible in game
-				   true          blocked  free      continue on path
-				   true          blocked  blocked   illegal
-				*/
-				// TODO This is not a good initialization
-				BoardPosition path_position_result = BoardPosition(0);
-				BoardPosition finish_position_result = BoardPosition(0);
-				int path_count_on_path = count;
-				int finish_count_on_path;
-				bool path_free = check_move_on_path(piece->position.idx, count, path_position_result);
-				bool finish_free = try_enter_finish(piece->player, piece->position.idx, count, piece->blocking, finish_position_result, finish_count_on_path);
-
-				// Table above can be summarized in this if-chain
-				if (!avoid_finish && finish_free) {
-					position_result = finish_position_result;
-					count_on_path = finish_count_on_path;
-				} else if (path_free) {
-					position_result = path_position_result;
-					count_on_path = path_count_on_path;
-				} else {
-					return false;
-				}
-			} else {
-				assert(piece->position.area == Finish);
-
-				bool legal = check_move_in_finish(piece->player, piece->position.idx, count, position_result);
-				if (!legal) return false;
-			}
-
-			if (modify_state) {
-				// Change board state
-				if (remove_all_on_way) {
-					assert(count_on_path > 0);
-					if (piece->position.area == Path) {
-						board_state.send_to_kennel(piece->position.idx, count_on_path);
-					}
-				} else {
-					PiecePtr& piece_to_send_back = board_state.get_piece(position_result);
-					if (piece_to_send_back != nullptr) {
-						board_state.place_at_kennel(piece_to_send_back);
-					}
-				}
-
-				board_state.move_piece(piece, position_result);
-			}
-
-			return true;
-		}
-
-		int calc_steps_into_finish(int player, int from_path_idx, int count, bool piece_blocking, int& count_on_path_result) {
-			count_on_path_result = BoardState::calc_steps_on_path(player, from_path_idx, piece_blocking, count, true);
-			int steps_into_finish = count - count_on_path_result;
-			return steps_into_finish;
-		}
-
-		bool try_enter_finish(int player, int from_path_idx, int count, bool piece_blocking, BoardPosition& position_result, int& count_on_path_result) {
-			int steps_into_finish = calc_steps_into_finish(player, from_path_idx, count, piece_blocking, count_on_path_result);
-			int& steps_on_path = count_on_path_result;
-
-			if (steps_on_path != 0) {
-				bool legal = check_move_on_path(from_path_idx, steps_on_path, position_result);
-				if (!legal) return false;
-			}
-
-			if (steps_into_finish > 0) {
-				// Piece transitions from path area to finish area
-				bool backwards = count < 0;
-				assert(!backwards);
-
-				// The calc_steps_into_finish() call already makes sure that this case is impossible here
-				assert(!(steps_on_path == 0 && piece_blocking)); // Piece cannot go into finish while it is blocking
-
-				// In this check position index "-1" in the finish represents the position right before the finish
-				bool legal = check_move_in_finish(player, -1, steps_into_finish, position_result);
-				if (!legal) return false;
-			}
-
-			return true;
-		}
-
-		int possible_forward_steps_in_finish(int player, int from_finish_idx) {
-			std::array<PiecePtr, FINISH_LENGTH>& finish = board_state.finishes.at(player);
-
-			int result = 0;
-
-			if (from_finish_idx < -1) {
-				result = -from_finish_idx - 1;
-				from_finish_idx = -1;
-			}
-
-			assert(from_finish_idx >= -1);
-
-			for (int i = from_finish_idx + 1; i < FINISH_LENGTH; i++) {
-				if (finish.at(i) == nullptr) {
-					result++;
-				} else {
-					break;
-				}
-			}
-
-			return result;
-		}
-
-		int possible_forward_steps_on_path(int from_path_idx, bool backwards) {
-			int step = backwards ? -1 : 1;
-
-			int result = 0;
-			int limit = backwards ? -PATH_LENGTH : PATH_LENGTH;
-
-			// TODO Loop could be made faster by going in increments of PATH_SECTION_LENGTH
-			for (int i = 0; i != limit; i += step) {
-				int path_idx = positive_mod(from_path_idx + step + i, PATH_LENGTH);
-
-				if (path_idx == from_path_idx) {
-					continue;
-				}
-
-				PiecePtr& piece = board_state.get_piece(BoardPosition(path_idx));
-
-				if (piece != nullptr && piece->blocking) {
-					break;
-				}
-
-				result++;
-			}
-
-			return result;
-		}
-
-		int possible_steps_of_piece(int player, BoardPosition position, bool piece_blocking, bool backwards) {
-			if (position.area == Path) {
-				int steps_on_path = possible_forward_steps_on_path(position.idx, backwards);
-				int steps_possible = steps_on_path;
-
-				if (!backwards) {
-					int steps_on_path_if_finish = BoardState::calc_steps_on_path(player, position.idx, piece_blocking, PATH_LENGTH, true);
-					int steps_into_finish = possible_forward_steps_in_finish(player, -1);
-					steps_possible = steps_on_path_if_finish + steps_into_finish;
-				}
-
-				return steps_possible;
-			} else if (position.area == Finish) {
-				if (backwards) {
-					// Cannot move backwards in Kennel
-					return 0;
-				}
-
-				return possible_forward_steps_in_finish(player, position.idx);
-			} else if (position.area == Kennel) {
-				// Cannot move in Kennel
-				return 0;
-			} else {
-				assert(false);
-			}
-		}
-
-		bool check_block(int from_path_idx, int count) {
-			bool backwards = (count < 0);
-
-			int possible_steps = possible_forward_steps_on_path(from_path_idx, backwards);
-
-			if (backwards) {
-				count *= -1;
-			}
-
-			bool blocked = (count > possible_steps);
-
-			return blocked;
-		}
-
-		bool check_move_on_path(int from_path_idx, int count, BoardPosition& position_result) {
-			int target_path_idx = positive_mod(from_path_idx + count, PATH_LENGTH);
-
-			bool blocked = check_block(from_path_idx, count);
-			if (blocked) {
-				// Piece cannot leapfrog another piece that is blocking
-				return false;
-			}
-
-			position_result = BoardPosition(target_path_idx);
-
-			return true;
-		}
-
-		bool check_move_in_finish(int player, int from_finish_idx, int count, BoardPosition& position_result) {
-			bool backwards = count < 0;
-
-			if (backwards) {
-				// Piece cannot go backwards in finish
-				return false;
-			}
-
-			int steps_possible = possible_forward_steps_in_finish(player, from_finish_idx);
-
-			if (steps_possible < count) {
-				// Piece cannot go further than length of finish
-				// Piece cannot leapfrog another piece in finish
-				return false;
-			}
-
-			int finish_idx_target = from_finish_idx + count;
-
-			position_result = BoardPosition(Finish, player, finish_idx_target);
-
-			return true;
-		}
-
-		bool move_multiple_pieces(std::vector<MoveSpecifier> move_actions, bool modify_state) {
-			bool legal = true;
-
-			for (std::size_t i = 0; i < move_actions.size(); i++) {
-				MoveSpecifier move_action = move_actions.at(i);
-
-				PiecePtr& piece = board_state.ref_to_piece(move_action.piece_ref);
-				int count = move_action.count;
-				bool avoid_finish = move_action.avoid_finish;
-
-				// TODO Somehow pass the list of remaining pieces to check that they would not be moved to kennel by this move (to avoid pieces that are in the target_pieces list being moved to kennel before they are being moved)
-				legal = move_piece(piece, count, avoid_finish, modify_state, true);
-
-				if (!legal) {
-					break;
-				}
-			}
-
-			return legal;
-		}
-
-		bool swap_pieces(PiecePtr& piece_1, PiecePtr& piece_2, bool modify_state) {
-			if (piece_1 == nullptr || piece_2 == nullptr) {
-				return false;
-			}
-
-			if (piece_1->position.area != Path || piece_2->position.area != Path) {
-				// Only pieces on path can be swapped
-				return false;
-			}
-
-			if (piece_1->blocking || piece_2->blocking) {
-				// Blocking pieces cannot be swapped
-				return false;
-			}
-
-			if (modify_state) {
-				board_state.swap_pieces(piece_1, piece_2);
-			}
-
-			return true;
 		}
 
 		std::vector<ActionVar> possible_gives(int player) {
@@ -687,7 +397,7 @@ class DogGame {
 					int count_on_path_result;
 					// TODO This is not a good initialization
 					BoardPosition position_result = BoardPosition(0);
-					legal = try_enter_finish(player, piece->position.idx, count, piece->blocking, position_result, count_on_path_result);
+					legal = board_state.try_enter_finish(player, piece->position.idx, count, piece->blocking, position_result, count_on_path_result);
 					assert(legal);
 
 					if (position_result.area == Finish) {
@@ -746,7 +456,7 @@ class DogGame {
 				// TODO This is not a good initialization
 				BoardPosition position_result = BoardPosition(0);
 				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
-				bool legal = try_enter_finish(player, piece->position.idx, i, piece->blocking, position_result, count_on_path_result);
+				bool legal = board_state.try_enter_finish(player, piece->position.idx, i, piece->blocking, position_result, count_on_path_result);
 				assert(legal);
 
 				if (position_result.area == Finish) {
@@ -782,7 +492,7 @@ class DogGame {
 
 			for (PieceRef piece_ref : piece_refs) {
 				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
-				int max_count = possible_steps_of_piece(piece_ref.player, piece->position, piece->blocking, false);
+				int max_count = board_state.possible_steps_of_piece(piece_ref.player, piece->position, piece->blocking, false);
 
 				pieces_with_max_counts.push_back(std::make_tuple(piece_ref, max_count));
 			}
@@ -909,58 +619,6 @@ class DogGame {
 			return result;
 		}
 
-		// 0 = nothing, 1 = path, 2 = finish, 3 = kennel, 4 = char, 5 = block indicator
-		std::array<std::array<int, 41>, 21> vis_map_spec = {
-			{
-				{ 4, 0, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 5, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4 },
-				{ 0, 0, 0, 0, 0, 4, 0, 4, 0, 4, 0, 4, 0, 0, 0, 0, 1, 0, 4, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 4, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 4, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5 },
-				{ 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 },
-				{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1 },
-				{ 1, 0, 0, 2, 0, 2, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, 2, 0, 0, 1 },
-				{ 1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-				{ 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1 },
-				{ 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 5, 0, 0, 0, 3, 0, 3, 0, 3, 0, 3, 0, 0, 0, 0, 4 },
-			}
-		};
-		std::array<std::array<int, 41>, 21> vis_map_val = {
-			{
-				{ '0', 0, 0, 0, 0, 3, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 63, 0, 62, 0, 61, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '3' },
-				{ 0, 0, 0, 0, 0, '3', 0, '2', 0, '1', 0, '0', 0, 0, 0, 0, 1, 0, '\\', 0, 0, 0, 0, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, '0', 0, 0, 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 1, 0, '1', 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 2, 0, '2', 0, 0, 56, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 3, 0, '3', 0, 0, 0, 0, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 },
-				{ 12, 0, 11, 0, 10, 0, 9, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 0, 51, 0, 50, 0, 49, 0, 48 },
-				{ 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '/', 0, 47 },
-				{ 14, 0, 0, 10, 0, 11, 0, 12, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 0, 32, 0, 31, 0, 30, 0, 0, 46 },
-				{ 15, 0, '/', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45 },
-				{ 16, 0, 17, 0, 18, 0, 19, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 41, 0, 42, 0, 43, 0, 44 },
-				{ 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 22, 0, 0, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0, 0, 21, 0, 0, 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 0, 0, 0, 0, 20, 0, 0, 34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 0, '\\', 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-				{ '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32, 2, 0, 0, 0, 20, 0, 21, 0, 22, 0, 23, 0, 0, 0, 0, '2' },
-			}
-		};
-
 		friend std::ostream& operator<<(std::ostream& os, DogGame const& obj) {
 			  return os << obj.to_str();
 		}
@@ -968,80 +626,9 @@ class DogGame {
 		std::string to_str() const {
 			std::stringstream ss;
 
-			const char field_char = '.';
-			const char filler_char = ' ';
-			const char blocked_char = '*';
+			ss << board_state << std::endl;
 
-			for (std::size_t row = 0; row != vis_map_spec.size(); row++) {
-				for (std::size_t col = 0; col != vis_map_spec.at(0).size(); col++) {
-					int spec = vis_map_spec.at(row).at(col);
-					int val = vis_map_val.at(row).at(col);
-
-					switch (spec) {
-						case 1: {
-							const PiecePtr& piece = board_state.path.at(val);
-
-							if (piece == nullptr) {
-								ss << field_char;
-							} else {
-								ss << piece->player;
-							}
-
-							break;
-						}
-						case 2: {
-							int player = val / 10;
-							int finish_idx = val % 10;
-
-							const PiecePtr& piece = board_state.finishes.at(player).at(finish_idx);
-
-							if (piece == nullptr) {
-								ss << field_char;
-							} else {
-								ss << piece->player;
-							}
-
-							break;
-						}
-						case 3: {
-							int player = val / 10;
-							int kennel_idx = val % 10;
-
-							const PiecePtr& piece = board_state.kennels.at(player).at(kennel_idx);
-
-							if (piece == nullptr) {
-								ss << field_char;
-							} else {
-								ss << piece->player;
-							}
-
-							break;
-						}
-						case 4: {
-							ss << ((char) (val));
-							break;
-						}
-						case 5: {
-							int player = val;
-							int path_idx = board_state.get_start_path_idx(player);
-							const PiecePtr& piece = board_state.path.at(path_idx);
-
-							if (piece != nullptr && piece->blocking) {
-								ss << blocked_char;
-							} else {
-								ss << filler_char;
-							}
-
-							break;
-						}
-						default: {
-							ss << filler_char;
-							break;
-						}
-					}
-				}
-				ss << std::endl;
-			}
+			ss << "Notation: " << to_notation(board_state) << std::endl;
 
 			std::string hands_str = get_hands_str();
 			ss << hands_str;
