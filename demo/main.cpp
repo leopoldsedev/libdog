@@ -21,7 +21,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 
 	while (game.result() == -1) {
 		std::cout << game << std::endl;
-		std::cout << "player " << game.player_turn << "'s turn" << std::endl;
+		std::cout << "player " << game.player_turn << "'s turn (move " << (moves + 1) << ")" << std::endl;
 
 		std::vector<ActionVar> actions = game.get_possible_actions(game.player_turn);
 

@@ -468,6 +468,23 @@ TEST(CardTest, Seven) {
 
 	TEST_INVALID_MOVE_FROM("P15P63|P16*||", 0, "71304");
 	TEST_INVALID_MOVE_FROM("P15P63|P16*||", 0, "71106");
+
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "707");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "7061'1");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "7051'2");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "7041'3");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "7031'4");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "7021'5");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "7011'6");
+	TEST_INVALID_MOVE_FROM("P12F3|P15P16*|P14|P46P58", 0, "71'7");
+
+	TEST_INVALID_MOVE_FROM("P32P35|||", 0, "71304");
+
+	TEST_MOVE_FROM_TO("P0*||P33|", 0, "7030'4", "P3||P37|");
+	TEST_INVALID_MOVE_FROM("P0*||P32*|", 0, "7030'4"); // TODO Is this correct? Are you not allowed to move your team mates piece if it is blocking?
+	TEST_INVALID_MOVE_FROM("P0||P32*|", 0, "7030'4");
+
+	TEST_MOVE_FROM_TO("F1F2F3|F0F1F2F3|P13P32*F2F3|P37P46P48*F3", 1, "72'7", "F1F2F3|F0F1F2F3|P13P32*F2F3|P44P46P48*F3");
 }
 
 TEST(CardTest, IntoFinishFlag) {
@@ -573,6 +590,27 @@ TEST(CardTest, MoveInFinish) {
 	EXPECT_TRUE(game.play_notation(player, "A'3"));
 
 	EXPECT_PLAYER_AT(49, player);
+}
+
+TEST(PossibleAction, Move) {
+	DogGame game(false, false);
+	std::vector<ActionVar> actions;
+
+	game.load_board("P60|P17|P34|P50");
+
+	actions = game.possible_actions_for_card(0, Four, false);
+	EXPECT_EQ(actions.size(), 2);
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "40")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "4'0")));
+
+	actions = game.possible_actions_for_card(0, Five, false);
+	EXPECT_EQ(actions.size(), 2);
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "50")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "50-")));
+
+	actions = game.possible_actions_for_card(0, Nine, false);
+	EXPECT_EQ(actions.size(), 1);
+	EXPECT_THAT(actions, testing::Contains(from_notation(0, "90")));
 }
 
 TEST(PossibleAction, MoveInFinish) {

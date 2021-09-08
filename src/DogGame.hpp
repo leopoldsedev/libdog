@@ -6,6 +6,7 @@
 #include <array>
 #include <memory>
 #include <vector>
+#include <unordered_set>
 #include <cassert>
 
 #include "BoardState.hpp"
@@ -309,6 +310,15 @@ class DogGame {
 				return false;
 			}
 
+			// TODO Make this rule configurable
+			for (MoveSpecifier move_specifier : move_multiple.get_move_specifiers()) {
+				PiecePtr& piece = board_state.ref_to_piece(move_specifier.piece_ref);
+				if (piece->player != player && piece->blocking) {
+					// Cannot move pieces of team mate that are currently blocking
+					return false;
+				}
+			}
+
 			bool legal = board_state.move_multiple_pieces(move_multiple.get_move_specifiers(), modify_state);
 
 			if (legal && modify_state) {
@@ -398,9 +408,8 @@ class DogGame {
 					// TODO This is not a good initialization
 					BoardPosition position_result = BoardPosition(0);
 					legal = board_state.try_enter_finish(player, piece->position.idx, count, piece->blocking, position_result, count_on_path_result);
-					assert(legal);
 
-					if (position_result.area == Finish) {
+					if (legal && position_result.area == Finish) {
 						// avoid_finish flag would have an effect -> add it as possible action if it is legal (i.e. if the path isn't blocked)
 						move = Move(card, piece_ref, count, true, is_joker);
 
@@ -415,67 +424,94 @@ class DogGame {
 			return result;
 		}
 
-		// TODO Add parameter for max count per piece to avoid branching that will inevitably result in illegal moves
-		std::vector<ActionVar> _possible_move_multiples(int player, Card card, int count, bool is_joker, std::vector<std::tuple<PieceRef, int>> pieces, std::vector<MoveSpecifier> move_specifiers) {
+		struct action_state_equal_to {
+			bool operator()(const std::tuple<ActionVar, BoardState> &a, const std::tuple<ActionVar, BoardState> &b) const {
+				return std::get<1>(a) == std::get<1>(b);
+			}
+		};
+
+		struct action_state_hash {
+			size_t operator()(const std::tuple<ActionVar, BoardState> &t) const {
+				// TODO Optimize this hash
+				BoardPosition pos0 = std::get<1>(t).ref_to_pos(PieceRef(0, 0));
+				BoardPosition pos1 = std::get<1>(t).ref_to_pos(PieceRef(1, 0));
+				return pos0.idx + pos1.idx;
+			}
+		};
+
+		typedef std::unordered_set<std::tuple<ActionVar, BoardState>, action_state_hash, action_state_equal_to> my_set;
+
+		// TODO Refactor this mess of a function
+		my_set _possible_move_multiples(int player, Card card, BoardState board, int count, bool is_joker, std::vector<std::tuple<PieceRef, BoardPosition>> pieces, std::vector<MoveSpecifier> move_specifiers) {
 			assert(pieces.size() > 0);
 
-			std::vector<ActionVar> result;
+			my_set result;
 
-			PieceRef piece_ref = std::get<0>(pieces.back());
-			int max_count = std::get<1>(pieces.back());
+			if (count == 0) {
+				MoveMultiple move_mult(card, move_specifiers, is_joker);
 
-			if (pieces.size() == 1) {
-				std::vector<MoveSpecifier> move_specifiers_extended = move_specifiers;
-				MoveSpecifier move_specifier(piece_ref, count, false);
-				if (count > 0) {
-					move_specifiers_extended.insert(move_specifiers_extended.begin(), move_specifier);
+#ifndef NDEBUG
+				bool legal = try_play(player, move_mult, false);
+				if (!legal) {
+					PRINT_DBG(board_state);
+					for (auto m : move_specifiers) {
+						PRINT_DBG(m.piece_ref);
+						PRINT_DBG(m.count);
+					}
 				}
-				assert(move_specifiers_extended.size() > 0);
-				MoveMultiple move_mult(card, move_specifiers_extended);
-				assert(action_is_valid(move_mult));
+				assert(legal);
+#endif
 
-				result.push_back(move_mult);
+				std::tuple<ActionVar, BoardState> pair = std::make_tuple(move_mult, board);
+				result.insert(pair);
 
 				return result;
 			}
 
-			pieces.pop_back();
+			for (std::size_t i = 0; i < pieces.size(); i++) {
+				BoardPosition position = std::get<1>(pieces.at(i));
 
-			for (int i = 0; i <= std::min(count, max_count); i++) {
-				std::vector<MoveSpecifier> move_specifiers_extended = move_specifiers;
+				BoardState board_copy = board;
+				PiecePtr& piece = board_copy.get_piece(position);
+				assert(piece != nullptr);
 
-				MoveSpecifier move_specifier(piece_ref, i, false);
-				if (i > 0) {
-					move_specifiers_extended.insert(move_specifiers_extended.begin(), move_specifier);
-				}
+				if (piece->player == player || !piece->blocking) {
+					PieceRef piece_ref = std::get<0>(pieces.at(i));
+					MoveSpecifier move_specifier(piece_ref, 1, false);
 
-				std::vector<ActionVar> moves = _possible_move_multiples(player, card, count - i, is_joker, pieces, move_specifiers_extended);
-				APPEND(result, moves);
-
-				int count_on_path_result;
-				// TODO This is not a good initialization
-				BoardPosition position_result = BoardPosition(0);
-				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
-				bool legal = board_state.try_enter_finish(player, piece->position.idx, i, piece->blocking, position_result, count_on_path_result);
-				assert(legal);
-
-				if (position_result.area == Finish) {
-					// avoid_finish flag would have an effect -> continue recursion tree (move should be legal since blocked path is avoided by the max_counts)
-					move_specifiers_extended = move_specifiers;
-
-					move_specifier.avoid_finish = true;
-					if (i > 0) {
-						move_specifiers_extended.insert(move_specifiers_extended.begin(), move_specifier);
+					// Save all pointers to pieces to enable tracking piece positions through the following move_piece() call
+					std::vector<Piece*> piece_ptrs;
+					for (std::tuple<PieceRef, BoardPosition> t : pieces) {
+						PiecePtr& piece = board_copy.get_piece(std::get<1>(t));
+						piece_ptrs.push_back(piece.get());
 					}
 
-					moves = _possible_move_multiples(player, card, count - i, is_joker, pieces, move_specifiers_extended);
-					APPEND(result, moves);
+					bool legal = board_copy.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
+
+					if (legal) {
+						std::vector<std::tuple<PieceRef, BoardPosition>> pieces_copy = pieces;
+						for (std::size_t i = 0; i < pieces_copy.size(); i++) {
+							assert(piece_ptrs.at(i) != nullptr);
+							std::get<1>(pieces_copy.at(i)) = piece_ptrs.at(i)->position;
+						}
+
+						std::vector<MoveSpecifier> move_specifiers_copy = move_specifiers;
+						move_specifiers_copy.push_back(move_specifier);
+
+						my_set s = _possible_move_multiples(player, card, board_copy, count - 1, is_joker, pieces_copy, move_specifiers_copy);
+
+						result.insert(s.begin(), s.end());
+					}
 				}
 			}
 
 			return result;
 		}
 
+		// TODO Make more efficient
+		// TODO Currently avoid_finish flag is always set to false, generate also the moves that have this flag set to true
+		// TODO Somehow add tests for this function
+		// TODO Consolidate consecutive moves of the same piece
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker) {
 			std::vector<ActionVar> result;
 
@@ -488,16 +524,21 @@ class DogGame {
 				return {};
 			}
 
-			std::vector<std::tuple<PieceRef, int>> pieces_with_max_counts;
+			std::vector<std::tuple<PieceRef, BoardPosition>> pieces;
 
-			for (PieceRef piece_ref : piece_refs) {
+			for (PieceRef& piece_ref : piece_refs) {
 				PiecePtr& piece = board_state.ref_to_piece(piece_ref);
-				int max_count = board_state.possible_steps_of_piece(piece_ref.player, piece->position, piece->blocking, false);
-
-				pieces_with_max_counts.push_back(std::make_tuple(piece_ref, max_count));
+				assert(piece != nullptr);
+				pieces.push_back(std::make_tuple(piece_ref, piece->position));
+				assert(board_state.get_piece(piece->position) != nullptr);
 			}
 
-			result = _possible_move_multiples(player, card, count, is_joker, pieces_with_max_counts, {});
+			my_set s = _possible_move_multiples(player, card, board_state, count, is_joker, pieces, {});
+
+			for (std::tuple<ActionVar, BoardState> x : s) {
+				auto action = std::get<0>(x);
+				result.push_back(action);
+			}
 
 			return result;
 		}

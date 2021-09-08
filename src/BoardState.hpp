@@ -98,7 +98,11 @@ class BoardState {
 		friend bool operator==(const BoardState& a, const BoardState& b) {
 			for (std::size_t player = 0; player != a.kennels.size(); player++) {
 				for (std::size_t j = 0; j != a.kennels.size(); j++) {
-					if (*a.kennels.at(player).at(j) != *b.kennels.at(player).at(j)) {
+					if (a.kennels.at(player).at(j) != nullptr && b.kennels.at(player).at(j) != nullptr) {
+						if (*a.kennels.at(player).at(j) != *b.kennels.at(player).at(j)) {
+							return false;
+						}
+					} else if (a.kennels.at(player).at(j) != b.kennels.at(player).at(j)) {
 						return false;
 					}
 				}
@@ -106,14 +110,22 @@ class BoardState {
 
 			for (std::size_t player = 0; player != a.finishes.size(); player++) {
 				for (std::size_t j = 0; j != a.finishes.size(); j++) {
-					if (*a.finishes.at(player).at(j) != *b.finishes.at(player).at(j)) {
+					if (a.finishes.at(player).at(j) != nullptr && b.finishes.at(player).at(j) != nullptr) {
+						if (*a.finishes.at(player).at(j) != *b.finishes.at(player).at(j)) {
+							return false;
+						}
+					} else if (a.finishes.at(player).at(j) != b.finishes.at(player).at(j)) {
 						return false;
 					}
 				}
 			}
 
 			for (std::size_t i = 0; i != a.path.size(); i++) {
-				if (*a.path.at(i) != *b.path.at(i)) {
+				if (a.path.at(i) != nullptr && b.path.at(i) != nullptr) {
+					if (*a.path.at(i) != *b.path.at(i)) {
+						return false;
+					}
+				} else if (a.path.at(i) != b.path.at(i)) {
 					return false;
 				}
 			}
@@ -146,7 +158,7 @@ class BoardState {
 			return get_piece(position);
 		}
 
-		BoardPosition ref_to_pos(PieceRef piece_ref) {
+		BoardPosition ref_to_pos(PieceRef piece_ref) const {
 			int player = piece_ref.player;
 			int rank = piece_ref.rank;
 
@@ -156,7 +168,7 @@ class BoardState {
 			auto& finish = finishes.at(player);
 
 			for (int i = finish.size() - 1; i >= 0; i--) {
-				PiecePtr& piece = finish.at(i);
+				const PiecePtr& piece = finish.at(i);
 
 				if (piece != nullptr) {
 					if (piece_idx == rank) {
@@ -172,7 +184,7 @@ class BoardState {
 			for (int i = start_path_idx; i >= (start_path_idx - (int) path.size()); i--) {
 				int i_mod = positive_mod(i, path.size());
 
-				PiecePtr& piece = path.at(i_mod);
+				const PiecePtr& piece = path.at(i_mod);
 
 				if (piece != nullptr && piece->player == player && !piece->blocking) {
 					if (piece_idx == rank) {
@@ -183,7 +195,7 @@ class BoardState {
 			}
 
 			// Check potential blocking piece at start
-			PiecePtr& piece = path.at(start_path_idx);
+			const PiecePtr& piece = path.at(start_path_idx);
 
 			if (piece != nullptr && piece->player == player && piece->blocking) {
 				if (piece_idx == rank) {
@@ -196,7 +208,7 @@ class BoardState {
 			auto& kennel = kennels.at(player);
 
 			for (std::size_t i = 0; i < kennel.size(); i++) {
-				PiecePtr& piece = kennel.at(i);
+				const PiecePtr& piece = kennel.at(i);
 
 				if (piece != nullptr) {
 					if (piece_idx == rank) {
@@ -457,7 +469,7 @@ class BoardState {
 			if (modify_state) {
 				// Change board state
 				if (remove_all_on_way) {
-					assert(count_on_path > 0);
+					assert(count_on_path >= 0);
 					if (piece->position.area == Path) {
 						send_to_kennel(piece->position.idx, count_on_path);
 					}
@@ -637,20 +649,27 @@ class BoardState {
 			bool legal = true;
 
 			// All piece references are resolved in the starting position
-			std::vector<PiecePtr*> pieces;
+			// Note that it is not sufficient to resolve them to PiecePtr&
+			// because a PiecePtr essentially is a reference to a slot. If a
+			// move specifier causes another piece to be sent back to kernel,
+			// the PiecePtr of that piece would change to be nullptr.
+			// Consequently, pointers to the actual pieces are required. These
+			// pointers stay valid even if the pieces they point to are moved.
+			std::vector<Piece*> piece_ptrs;
 			for (MoveSpecifier move_specifier : move_actions) {
 				PiecePtr& piece = ref_to_piece(move_specifier.piece_ref);
-				pieces.push_back(&piece);
+				piece_ptrs.push_back(piece.get());
 			}
 
 			for (std::size_t i = 0; i < move_actions.size(); i++) {
 				MoveSpecifier move_action = move_actions.at(i);
 
-				PiecePtr* piece = pieces.at(i);
+				Piece* piece_ptr = piece_ptrs.at(i);
+				PiecePtr& piece = get_piece(piece_ptr->position);
 				int count = move_action.count;
 				bool avoid_finish = move_action.avoid_finish;
 
-				legal = move_piece(*piece, count, avoid_finish, true, true);
+				legal = move_piece(piece, count, avoid_finish, true, true);
 
 				if (!legal) {
 					break;

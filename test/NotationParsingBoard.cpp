@@ -57,8 +57,6 @@ TEST(NotationParsingBoard, Simple) {
 
 	NOTATION_TEST(board, "P0|P63|F0|F3");
 
-	PRINT_DBG(board);
-
 	EXPECT_PLAYER_AT(BoardPosition(0), 0, false);
 	EXPECT_PLAYER_AT(BoardPosition(Kennel, 0, 1), 0, false);
 	EXPECT_PLAYER_AT(BoardPosition(Kennel, 0, 2), 0, false);
