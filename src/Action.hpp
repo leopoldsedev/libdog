@@ -305,6 +305,7 @@ class Swap : public Action {
 
 typedef std::variant<Give, Discard, Start, Move, MoveMultiple, Swap> ActionVar;
 
+#define VAR_IS(x, class_name) std::holds_alternative<class_name>(x)
 #define MATCH(x, class_name, bind_name) const class_name* bind_name = std::get_if<class_name>(x)
 #define MATCH_NON_CONST(x, class_name, bind_name) class_name* bind_name = std::get_if<class_name>(x)
 

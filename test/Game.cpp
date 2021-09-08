@@ -19,7 +19,7 @@
 } while(0)
 
 #define TEST_MOVE_FROM_TO(notation_start, player_id, notation_move, notation_end) do { \
-	DogGame game(false, false); \
+	DogGame game(false, false, false); \
 	game.load_board(notation_start); \
 	EXPECT_TRUE(game.play_notation(player_id, notation_move)); \
 	EXPECT_TRUE(check_state(game)); \
@@ -27,7 +27,7 @@
 } while(0)
 
 #define TEST_INVALID_MOVE_FROM(notation_start, player_id, notation_move) do { \
-	DogGame game(false, false); \
+	DogGame game(false, false, false); \
 	game.load_board(notation_start); \
 	EXPECT_FALSE(game.play_notation(player_id, notation_move)); \
 	EXPECT_TRUE(check_state(game)); \
@@ -125,7 +125,7 @@ TEST(BasicTest, Reset) {
 }
 
 TEST(BasicTest, Start) {
-	DogGame game;
+	DogGame game(false, false, false);
 
 	game.board_state.start_piece(0, true);
 	EXPECT_TRUE(check_state(game));
@@ -149,7 +149,7 @@ TEST(BasicTest, Start) {
 }
 
 TEST(BasicTest, MovePiece) {
-	DogGame game;
+	DogGame game(false, false, false);
 
 	game.board_state.start_piece(0, true);
 
@@ -167,7 +167,7 @@ TEST(BasicTest, MovePiece) {
 }
 
 TEST(BasicTest, Blockades) {
-	DogGame game;
+	DogGame game(false, false, false);
 
 	game.board_state.start_piece(0, true);
 
@@ -238,8 +238,18 @@ TEST(BasicTest, Blockades) {
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 }
 
+TEST(PrimitiveTest, Authorization) {
+	DogGame game(false, false, false);
+
+	EXPECT_TRUE(game.play(0, Start(Ace)));
+	EXPECT_TRUE(game.play(1, Start(Ace)));
+
+	EXPECT_FALSE(game.play(0, Move(Ace, PieceRef(1, 0), 1, false)));
+	// TODO Check this for all other actions (that player is not allowed to move all pieces
+}
+
 TEST(BasicTest, PieceRefResolution) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	// TODO Also check negative construction cases
 	for (int player = 0; player < PLAYER_COUNT; player++) {
@@ -271,14 +281,14 @@ TEST(BasicTest, PieceRefResolution) {
 }
 
 TEST(CardTest, MovePiece) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	TEST_MOVE_FROM_TO("|||", 0, "A#", "P0*|||");
 	TEST_MOVE_FROM_TO("P0*|||", 0, "20", "P2|||");
 }
 
 TEST(CardTest, StartInvalid) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	TEST_MOVE_FROM_TO("P1P2P3|||", 0, "A#", "P0*P1P2P3|||");
 
@@ -288,7 +298,7 @@ TEST(CardTest, StartInvalid) {
 }
 
 TEST(CardTest, Finish) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	EXPECT_TRUE(game.play_notation(0, "K#"));
 	EXPECT_TRUE(check_state(game));
@@ -324,7 +334,7 @@ TEST(CardTest, Finish) {
 }
 
 TEST(CardTest, BackwardStartFinish) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	EXPECT_TRUE(game.play_notation(0, "A#"));
 	EXPECT_TRUE(check_state(game));
@@ -340,7 +350,7 @@ TEST(CardTest, BackwardStartFinish) {
 }
 
 TEST(CardTest, NoFinishFromStart) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	EXPECT_TRUE(game.play_notation(0, "A#"));
 	EXPECT_TRUE(check_state(game));
@@ -351,7 +361,7 @@ TEST(CardTest, NoFinishFromStart) {
 }
 
 TEST(CardTest, SendToKennel) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	EXPECT_TRUE(game.play_notation(0, "A#"));
 	EXPECT_TRUE(check_state(game));
@@ -420,7 +430,7 @@ TEST(CardTest, SendToKennel) {
 }
 
 TEST(CardTest, Swap) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	EXPECT_TRUE(game.play_notation(0, "A#"));
 	EXPECT_TRUE(check_state(game));
@@ -483,8 +493,6 @@ TEST(CardTest, Seven) {
 	TEST_MOVE_FROM_TO("P0*||P33|", 0, "7030'4", "P3||P37|");
 	TEST_INVALID_MOVE_FROM("P0*||P32*|", 0, "7030'4"); // TODO Is this correct? Are you not allowed to move your team mates piece if it is blocking?
 	TEST_INVALID_MOVE_FROM("P0||P32*|", 0, "7030'4");
-
-	TEST_MOVE_FROM_TO("F1F2F3|F0F1F2F3|P13P32*F2F3|P37P46P48*F3", 1, "72'7", "F1F2F3|F0F1F2F3|P13P32*F2F3|P44P46P48*F3");
 }
 
 TEST(CardTest, IntoFinishFlag) {
@@ -501,7 +509,7 @@ TEST(CardTest, IntoFinishFlag) {
 	   true          blocked  blocked   illegal
 	*/
 
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	int player = 0;
 
@@ -543,7 +551,7 @@ TEST(CardTest, IntoFinishFlag) {
 }
 
 TEST(CardTest, MoveInFinish) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	int player = 3;
 	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, player, 0)), BoardPosition(Finish, player, 2));
@@ -592,8 +600,44 @@ TEST(CardTest, MoveInFinish) {
 	EXPECT_PLAYER_AT(49, player);
 }
 
+TEST(CardTest, PlayForTeamMate) {
+	DogGame game(false, false, false);
+	std::vector<ActionVar> actions;
+
+	game.load_board("F0F1F2F3||P0|");
+	TEST_MOVE_FROM_TO("F0F1F2F3||P0|", 0, "T0", "F0F1F2F3||P10|");
+	TEST_MOVE_FROM_TO("F0F1F2F3||P0|", 0, "K#", "F0F1F2F3||P0P32*|");
+
+	TEST_INVALID_MOVE_FROM("F0F1F2F3||P0P32*|", 0, "A#");
+	TEST_INVALID_MOVE_FROM("F0F1F2F3||P0P33P34P35|", 0, "A#");
+
+	TEST_INVALID_MOVE_FROM("F0F1F2F3||F0F1F2F3|", 0, "20");
+	TEST_INVALID_MOVE_FROM("F0F1F2F3||F0F1F2F3|", 0, "K#");
+
+	TEST_MOVE_FROM_TO("F0F1F2F3|P16|P0|P32", 0, "J010", "F0F1F2F3|P0|P16|P32");
+	TEST_INVALID_MOVE_FROM("F0F1F2F3|P16|P0|P32", 0, "J130");
+
+	TEST_MOVE_FROM_TO("F0F1F2F3||P0|", 0, "707", "F0F1F2F3||P7|");
+
+	TEST_MOVE_FROM_TO("F1F2F3|F0F1F2F3|P13P32*F2F3|P37P46P48*F3", 1, "727", "F1F2F3|F0F1F2F3|P13P32*F2F3|P44P46P48*F3");
+	TEST_INVALID_MOVE_FROM("F1F2F3|F0F1F2F3|P13P32*F2F3|P37P46P48*F3", 1, "72'7");
+
+
+	TEST_INVALID_MOVE_FROM("F0F1F2F3|P30F1F2F3|P26P32*P39F3|P62F3", 0, "X72'12'12'12'12'12'12'1");
+
+	DogGame game1(false, false, false);
+	std::string notation_str = "F0F1F2F3|P30F1F2F3|P26P32*P39F3|P62F3";
+	game1.load_board(notation_str);
+	ActionVar action = from_notation(2, "X72'12'12'12'12'12'12'1");
+	EXPECT_FALSE(game1.play(0, action));
+	EXPECT_TRUE(check_state(game1));
+	EXPECT_EQ(to_notation(game1.board_state), notation_str);
+
+	// TODO Add checks for possible actions
+}
+
 TEST(PossibleAction, Move) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 	std::vector<ActionVar> actions;
 
 	game.load_board("P60|P17|P34|P50");
@@ -614,7 +658,7 @@ TEST(PossibleAction, Move) {
 }
 
 TEST(PossibleAction, MoveInFinish) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 	std::vector<ActionVar> actions;
 
 	int player = 3;
@@ -667,7 +711,7 @@ TEST(PossibleAction, AvoidFinish) {
 }
 
 TEST(PossibleAction, Swap) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 	std::vector<ActionVar> actions;
 
 	actions = game.possible_actions_for_card(0, Jack, false);
@@ -773,7 +817,7 @@ TEST(PossibleAction, Swap) {
 TEST(PossibleAction, SevenSimple) {
 	GTEST_SKIP();
 
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 	std::vector<ActionVar> actions;
 
 	actions = game.possible_actions_for_card(0, Seven, false);
@@ -848,12 +892,55 @@ TEST(PossibleAction, SevenSimple) {
 	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 06 11")));
 
 	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 07")));
+
+
+	game.load_board("F0F1F2F3|P18F1F2F3|P37F1F2F3|P48P60F2F3");
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 34);
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 0'7")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 11 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 12 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 13 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 14 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 15 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 16 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 17")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 11 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 12 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 13 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 14 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 15 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01 16")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 0'6")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 11 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 12 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 13 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 14 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 15 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 01- 16")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02 11 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02 12 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02 13 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02 14 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02 15")));
+
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02- 0'5")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02- 11 0'4")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02- 12 0'3")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02- 13 0'2")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02- 14 0'1")));
+	EXPECT_THAT(actions, testing::Contains(from_notation(3, "7 02- 15")));
 }
 
 TEST(PossibleAction, SevenBlockades) {
 	GTEST_SKIP();
-
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 	std::vector<ActionVar> actions;
 
 	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 0)), BoardPosition(12));
@@ -864,7 +951,6 @@ TEST(PossibleAction, SevenBlockades) {
 
 	game.board_state.start_piece(2);
 
-	PRINT_DBG(game);
 	actions = game.possible_actions_for_card(0, Seven, false);
 	EXPECT_EQ(actions.size(), 4);
 
@@ -888,7 +974,7 @@ TEST(PossibleAction, SevenBlockades) {
 }
 
 TEST(FullGameTest, WinCondition) {
-	DogGame game(false, false);
+	DogGame game(false, false, false);
 
 	EXPECT_EQ(game.result(), -1);
 
@@ -915,21 +1001,527 @@ TEST(FullGameTest, WinCondition) {
 }
 
 TEST(FullGameTest, CardExchange) {
-	GTEST_SKIP();
-	// TODO
+	DogGame game(true, true, true);
+	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
+
+	// Assumed hand state:
+	// 0: 95A454
+	// 1: 968X2X
+	// 2: 924KQ8
+	// 3: K923KA
+
+	EXPECT_FALSE(game.cards_state.check_player_has_card(0, Queen));
+	EXPECT_FALSE(game.cards_state.check_player_has_card(1, King));
+	EXPECT_FALSE(game.cards_state.check_player_has_card(2, Five));
+	EXPECT_FALSE(game.cards_state.check_player_has_card(3, Joker));
+
+	EXPECT_FALSE(game.play_notation(0, "A#"));
+	EXPECT_FALSE(game.play_notation(0, "G2"));
+	EXPECT_TRUE(game.play_notation(0, "G5"));
+
+	EXPECT_FALSE(game.play_notation(1, "XA#"));
+	EXPECT_FALSE(game.play_notation(1, "GT"));
+	EXPECT_TRUE(game.play_notation(1, "GX"));
+
+	EXPECT_FALSE(game.play_notation(2, "K#"));
+	EXPECT_FALSE(game.play_notation(2, "GX"));
+	EXPECT_TRUE(game.play_notation(2, "GQ"));
+
+	EXPECT_FALSE(game.play_notation(3, "K#"));
+	EXPECT_FALSE(game.play_notation(3, "GQ"));
+	EXPECT_TRUE(game.play_notation(3, "GK"));
+
+	EXPECT_TRUE(game.cards_state.check_player_has_card(0, Queen));
+	EXPECT_TRUE(game.cards_state.check_player_has_card(1, King));
+	EXPECT_TRUE(game.cards_state.check_player_has_card(2, Five));
+	EXPECT_TRUE(game.cards_state.check_player_has_card(3, Joker));
+
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+	EXPECT_TRUE(game.play_notation(1, "XA#"));
+	EXPECT_TRUE(game.play_notation(2, "K#"));
+	EXPECT_TRUE(game.play_notation(3, "K#"));
+
+	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
+
+	// Same test repeated, but from a game state where most players are already finished
+	game = DogGame(true, true, true);
+	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
+
+	// Assumed hand state:
+	// 0: 95A454
+	// 1: 968X2X
+	// 2: 924KQ8
+	// 3: K923KA
+
+	game.load_board("F0F1F2F3|F0F1F2F3|F1F2F3|F1F2F3");
+
+	EXPECT_FALSE(game.cards_state.check_player_has_card(0, Queen));
+	EXPECT_FALSE(game.cards_state.check_player_has_card(1, King));
+	EXPECT_FALSE(game.cards_state.check_player_has_card(2, Five));
+	EXPECT_FALSE(game.cards_state.check_player_has_card(3, Joker));
+
+	EXPECT_FALSE(game.play_notation(0, "A#"));
+	EXPECT_FALSE(game.play_notation(0, "G2"));
+	EXPECT_TRUE(game.play_notation(0, "G5"));
+
+	EXPECT_FALSE(game.play_notation(1, "XA#"));
+	EXPECT_FALSE(game.play_notation(1, "GT"));
+	EXPECT_TRUE(game.play_notation(1, "GX"));
+
+	EXPECT_FALSE(game.play_notation(2, "K#"));
+	EXPECT_FALSE(game.play_notation(2, "GX"));
+	EXPECT_TRUE(game.play_notation(2, "GQ"));
+
+	EXPECT_FALSE(game.play_notation(3, "K#"));
+	EXPECT_FALSE(game.play_notation(3, "GQ"));
+	EXPECT_TRUE(game.play_notation(3, "GK"));
+
+	EXPECT_TRUE(game.cards_state.check_player_has_card(0, Queen));
+	EXPECT_TRUE(game.cards_state.check_player_has_card(1, King));
+	EXPECT_TRUE(game.cards_state.check_player_has_card(2, Five));
+	EXPECT_TRUE(game.cards_state.check_player_has_card(3, Joker));
+}
+
+TEST(FullGameTest, Give) {
+	// TODO Test give for when some players are finished
+	// TODO Test in give phase and out of give phase
+}
+
+TEST(FullGameTest, Discard) {
+	// TODO Test discard for when some players are finished
 }
 
 TEST(FullGameTest, Turns) {
-	GTEST_SKIP();
-	// TODO
+	DogGame game(true, true, false);
+	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
+
+	// Assumed hand state:
+	// 0: 95A454
+	// 1: 968X2X
+	// 2: 924KQ8
+	// 3: K923KA
+
+	EXPECT_EQ(game.player_turn, 0);
+	EXPECT_FALSE(game.play_notation(1, "XK#"));
+	EXPECT_FALSE(game.play_notation(2, "K#"));
+	EXPECT_FALSE(game.play_notation(3, "K#"));
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+
+	EXPECT_EQ(game.player_turn, 1);
+	EXPECT_FALSE(game.play_notation(0, "90"));
+	EXPECT_FALSE(game.play_notation(2, "K#"));
+	EXPECT_FALSE(game.play_notation(3, "K#"));
+	EXPECT_TRUE(game.play_notation(1, "XK#"));
+
+	EXPECT_EQ(game.player_turn, 2);
+	EXPECT_FALSE(game.play_notation(0, "90"));
+	EXPECT_FALSE(game.play_notation(1, "90"));
+	EXPECT_FALSE(game.play_notation(3, "K#"));
+	EXPECT_TRUE(game.play_notation(2, "K#"));
+
+	EXPECT_EQ(game.player_turn, 3);
+	EXPECT_FALSE(game.play_notation(0, "90"));
+	EXPECT_FALSE(game.play_notation(1, "90"));
+	EXPECT_FALSE(game.play_notation(2, "90"));
+	EXPECT_TRUE(game.play_notation(3, "K#"));
+
+	// Assumed hand state:
+	// 0: 95454
+	// 1: 968X2
+	// 2: 924Q8
+	// 3: K923A
+
+	EXPECT_EQ(game.player_turn, 0);
+	EXPECT_FALSE(game.play_notation(3, "90"));
+	EXPECT_FALSE(game.play_notation(1, "90"));
+	EXPECT_FALSE(game.play_notation(2, "90"));
+	EXPECT_TRUE(game.play_notation(0, "90"));
+
+	EXPECT_TRUE(game.play_notation(1, "90"));
+	EXPECT_TRUE(game.play_notation(2, "90"));
+	EXPECT_TRUE(game.play_notation(3, "90"));
+
+	// Assumed hand state:
+	// 0: 5454
+	// 1: 68X2
+	// 2: 24Q8
+	// 3: K23A
+
+	EXPECT_TRUE(game.play_notation(0, "50"));
+	EXPECT_TRUE(game.play_notation(1, "60"));
+	EXPECT_TRUE(game.play_notation(2, "80"));
+	EXPECT_TRUE(game.play_notation(3, "A0"));
+
+	// Assumed hand state:
+	// 0: 544
+	// 1: 8X2
+	// 2: 24Q
+	// 3: K23
+
+	EXPECT_TRUE(game.play_notation(0, "50"));
+	EXPECT_TRUE(game.play_notation(1, "80"));
+	EXPECT_TRUE(game.play_notation(2, "Q0"));
+	EXPECT_TRUE(game.play_notation(3, "30"));
+
+	// Assumed hand state:
+	// 0: 44
+	// 1: X2
+	// 2: 24
+	// 3: K2
+
+	EXPECT_TRUE(game.play_notation(0, "40"));
+	EXPECT_TRUE(game.play_notation(1, "20"));
+	EXPECT_TRUE(game.play_notation(2, "20"));
+	EXPECT_TRUE(game.play_notation(3, "20"));
+
+	// Assumed hand state:
+	// 0: 4
+	// 1: X
+	// 2: 4
+	// 3: K
+
+	EXPECT_TRUE(game.play_notation(0, "40"));
+	EXPECT_TRUE(game.play_notation(1, "X40"));
+	EXPECT_TRUE(game.play_notation(2, "40"));
+	EXPECT_TRUE(game.play_notation(3, "K#"));
+
+	// Assumed hand state:
+	// 0: 62AJ6
+	// 1: 6396X
+	// 2: T8984
+	// 3: 3J34T
+
+	// One player is skipped after new cards are given out
+	EXPECT_EQ(game.player_turn, 1);
+	EXPECT_FALSE(game.play_notation(0, "A#"));
+	EXPECT_FALSE(game.play_notation(2, "40"));
+	EXPECT_FALSE(game.play_notation(3, "30"));
+	EXPECT_TRUE(game.play_notation(1, "XK#"));
 }
 
 TEST(FullGameTest, HandCheck) {
-	GTEST_SKIP();
-	// TODO
+	DogGame game(false, true, false);
+	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
+
+	// Assumed hand state:
+	// 0: 95A454
+	// 1: 968X2X
+	// 2: 924KQ8
+	// 3: K923KA
+
+	EXPECT_FALSE(game.play_notation(0, "K#"));
+	EXPECT_FALSE(game.play_notation(0, "XA#"));
+	EXPECT_FALSE(game.play_notation(0, "XK#"));
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+
+	EXPECT_FALSE(game.play_notation(1, "K#"));
+	EXPECT_FALSE(game.play_notation(1, "A#"));
+	EXPECT_TRUE(game.play_notation(1, "XA#", false));
+	EXPECT_TRUE(game.play_notation(1, "XK#"));
+
+	EXPECT_FALSE(game.play_notation(2, "A#"));
+	EXPECT_FALSE(game.play_notation(2, "XA#"));
+	EXPECT_FALSE(game.play_notation(2, "XK#"));
+	EXPECT_TRUE(game.play_notation(2, "K#"));
+
+	EXPECT_FALSE(game.play_notation(3, "XA#"));
+	EXPECT_FALSE(game.play_notation(3, "XK#"));
+	EXPECT_TRUE(game.play_notation(3, "K#", false));
+	EXPECT_TRUE(game.play_notation(3, "A#"));
+
+	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
+
+	// Assumed hand state:
+	// 0: 95454
+	// 1: 968X2
+	// 2: 924Q8
+	// 3: K923K
+
+	EXPECT_FALSE(game.play_notation(0, "A0"));
+	EXPECT_FALSE(game.play_notation(0, "20"));
+	EXPECT_FALSE(game.play_notation(0, "30"));
+	EXPECT_FALSE(game.play_notation(0, "60"));
+	EXPECT_FALSE(game.play_notation(0, "707"));
+	EXPECT_FALSE(game.play_notation(0, "80"));
+	EXPECT_FALSE(game.play_notation(0, "T0"));
+	EXPECT_FALSE(game.play_notation(0, "Q0"));
+	EXPECT_FALSE(game.play_notation(0, "K0"));
+	EXPECT_FALSE(game.play_notation(0, "X40"));
+	EXPECT_TRUE(game.play_notation(0, "40", false));
+	EXPECT_TRUE(game.play_notation(0, "50", false));
+	EXPECT_TRUE(game.play_notation(0, "90", false));
+
+	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
+
+	EXPECT_FALSE(game.play_notation(1, "A0"));
+	EXPECT_FALSE(game.play_notation(1, "30"));
+	EXPECT_FALSE(game.play_notation(1, "40"));
+	EXPECT_FALSE(game.play_notation(1, "50"));
+	EXPECT_FALSE(game.play_notation(1, "707"));
+	EXPECT_FALSE(game.play_notation(1, "T0"));
+	EXPECT_FALSE(game.play_notation(1, "Q0"));
+	EXPECT_FALSE(game.play_notation(1, "K0"));
+	EXPECT_TRUE(game.play_notation(1, "20", false));
+	EXPECT_TRUE(game.play_notation(1, "60", false));
+	EXPECT_TRUE(game.play_notation(1, "80", false));
+	EXPECT_TRUE(game.play_notation(1, "90", false));
+	EXPECT_TRUE(game.play_notation(1, "XA0", false));
+
+	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
+
+	EXPECT_FALSE(game.play_notation(2, "A0"));
+	EXPECT_FALSE(game.play_notation(2, "30"));
+	EXPECT_FALSE(game.play_notation(2, "50"));
+	EXPECT_FALSE(game.play_notation(2, "60"));
+	EXPECT_FALSE(game.play_notation(2, "707"));
+	EXPECT_FALSE(game.play_notation(2, "T0"));
+	EXPECT_FALSE(game.play_notation(2, "K0"));
+	EXPECT_FALSE(game.play_notation(2, "X20"));
+	EXPECT_TRUE(game.play_notation(2, "20", false));
+	EXPECT_TRUE(game.play_notation(2, "40", false));
+	EXPECT_TRUE(game.play_notation(2, "80", false));
+	EXPECT_TRUE(game.play_notation(2, "90", false));
+	EXPECT_TRUE(game.play_notation(2, "Q0", false));
+
+	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
+
+	EXPECT_FALSE(game.play_notation(3, "A0"));
+	EXPECT_FALSE(game.play_notation(3, "40"));
+	EXPECT_FALSE(game.play_notation(3, "50"));
+	EXPECT_FALSE(game.play_notation(3, "60"));
+	EXPECT_FALSE(game.play_notation(3, "707"));
+	EXPECT_FALSE(game.play_notation(3, "80"));
+	EXPECT_FALSE(game.play_notation(3, "T0"));
+	EXPECT_FALSE(game.play_notation(3, "Q0"));
+	EXPECT_FALSE(game.play_notation(3, "X20"));
+	EXPECT_TRUE(game.play_notation(3, "20", false));
+	EXPECT_TRUE(game.play_notation(3, "30", false));
+	EXPECT_TRUE(game.play_notation(3, "90", false));
+	EXPECT_TRUE(game.play_notation(3, "K0", false));
+
+	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
 }
 
 TEST(FullGameTest, One) {
-	GTEST_SKIP();
-	DogGame game;
+	DogGame game(true, true, false);
+	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
+
+	EXPECT_TRUE(game.play_notation(0, "G4"));
+	EXPECT_TRUE(game.play_notation(1, "GX"));
+	EXPECT_TRUE(game.play_notation(2, "G2"));
+	EXPECT_TRUE(game.play_notation(3, "GK"));
+
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+	EXPECT_TRUE(game.play_notation(1, "K#"));
+	EXPECT_TRUE(game.play_notation(2, "K#"));
+	EXPECT_TRUE(game.play_notation(3, "A#"));
+
+	EXPECT_TRUE(game.play_notation(0, "4'0"));
+	EXPECT_TRUE(game.play_notation(1, "X4'0"));
+	EXPECT_TRUE(game.play_notation(2, "4'0"));
+	EXPECT_TRUE(game.play_notation(3, "X4'0"));
+
+	EXPECT_TRUE(game.play_notation(0, "50"));
+	EXPECT_TRUE(game.play_notation(1, "80"));
+	EXPECT_TRUE(game.play_notation(2, "80"));
+	EXPECT_TRUE(game.play_notation(3, "30"));
+
+	EXPECT_TRUE(game.play_notation(0, "20"));
+	EXPECT_TRUE(game.play_notation(1, "D2"));
+	EXPECT_TRUE(game.play_notation(2, "D9"));
+	EXPECT_TRUE(game.play_notation(3, "20"));
+
+	EXPECT_TRUE(game.play_notation(0, "D5"));
+	EXPECT_TRUE(game.play_notation(1, "D6"));
+	EXPECT_TRUE(game.play_notation(2, "DQ"));
+	EXPECT_FALSE(game.play_notation(3, "D9"));
+	EXPECT_TRUE(game.play_notation(3, "K#"));
+
+	EXPECT_TRUE(game.play_notation(0, "D9"));
+	EXPECT_TRUE(game.play_notation(1, "D9"));
+	EXPECT_TRUE(game.play_notation(2, "D4"));
+	EXPECT_TRUE(game.play_notation(3, "91"));
+
+	EXPECT_TRUE(game.play_notation(1, "G3"));
+	EXPECT_TRUE(game.play_notation(2, "G4"));
+	EXPECT_TRUE(game.play_notation(3, "G4"));
+	EXPECT_TRUE(game.play_notation(0, "G6"));
+
+	EXPECT_TRUE(game.play_notation(1, "XK#"));
+	EXPECT_TRUE(game.play_notation(2, "D6"));
+	EXPECT_TRUE(game.play_notation(3, "T1"));
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+
+	EXPECT_TRUE(game.play_notation(1, "4'1"));
+	EXPECT_TRUE(game.play_notation(2, "D8"));
+	EXPECT_TRUE(game.play_notation(3, "31"));
+	EXPECT_TRUE(game.play_notation(0, "4'1"));
+
+	EXPECT_TRUE(game.play_notation(1, "61"));
+	EXPECT_TRUE(game.play_notation(2, "D8"));
+	EXPECT_TRUE(game.play_notation(3, "J101"));
+	EXPECT_TRUE(game.play_notation(0, "J131"));
+
+	EXPECT_TRUE(game.play_notation(1, "D6"));
+	EXPECT_TRUE(game.play_notation(2, "D9"));
+	EXPECT_TRUE(game.play_notation(3, "31"));
+	EXPECT_TRUE(game.play_notation(0, "61"));
+
+	EXPECT_TRUE(game.play_notation(1, "D9"));
+	EXPECT_TRUE(game.play_notation(2, "DT"));
+	EXPECT_TRUE(game.play_notation(3, "30"));
+	EXPECT_TRUE(game.play_notation(0, "D2"));
+
+	EXPECT_TRUE(game.play_notation(2, "G7"));
+	EXPECT_TRUE(game.play_notation(3, "GX"));
+	EXPECT_TRUE(game.play_notation(0, "G7"));
+	EXPECT_TRUE(game.play_notation(1, "G7"));
+
+	EXPECT_TRUE(game.play_notation(2, "D3"));
+	EXPECT_TRUE(game.play_notation(3, "Q1"));
+	EXPECT_TRUE(game.play_notation(0, "D2"));
+	EXPECT_TRUE(game.play_notation(1, "XK#"));
+
+	EXPECT_TRUE(game.play_notation(2, "DT"));
+	EXPECT_TRUE(game.play_notation(3, "7161'1"));
+	EXPECT_TRUE(game.play_notation(0, "D3"));
+	EXPECT_TRUE(game.play_notation(1, "T2"));
+
+	EXPECT_TRUE(game.play_notation(2, "DJ"));
+	EXPECT_TRUE(game.play_notation(3, "41"));
+	EXPECT_TRUE(game.play_notation(0, "D9"));
+	EXPECT_TRUE(game.play_notation(1, "J231"));
+
+	EXPECT_TRUE(game.play_notation(2, "D7"));
+	EXPECT_TRUE(game.play_notation(3, "31"));
+	EXPECT_TRUE(game.play_notation(0, "D7"));
+	EXPECT_TRUE(game.play_notation(1, "52"));
+
+	EXPECT_TRUE(game.play_notation(3, "G7"));
+	EXPECT_TRUE(game.play_notation(0, "GJ"));
+	EXPECT_TRUE(game.play_notation(1, "GA"));
+	EXPECT_TRUE(game.play_notation(2, "G6"));
+
+	EXPECT_TRUE(game.play_notation(3, "T1"));
+	EXPECT_TRUE(game.play_notation(0, "D6"));
+	EXPECT_TRUE(game.play_notation(1, "K#"));
+	EXPECT_TRUE(game.play_notation(2, "A#"));
+
+	EXPECT_TRUE(game.play_notation(3, "A1"));
+	EXPECT_TRUE(game.play_notation(0, "D6"));
+	EXPECT_TRUE(game.play_notation(1, "Q2"));
+	EXPECT_TRUE(game.play_notation(2, "Q1"));
+
+	EXPECT_TRUE(game.play_notation(3, "D2"));
+	EXPECT_TRUE(game.play_notation(0, "DT"));
+	EXPECT_TRUE(game.play_notation(1, "727"));
+	EXPECT_TRUE(game.play_notation(2, "J112"));
+
+	EXPECT_TRUE(game.play_notation(0, "G9"));
+	EXPECT_TRUE(game.play_notation(1, "GQ"));
+	EXPECT_TRUE(game.play_notation(2, "GK"));
+	EXPECT_TRUE(game.play_notation(3, "G5"));
+
+	EXPECT_TRUE(game.play_notation(0, "K#"));
+	EXPECT_TRUE(game.play_notation(1, "52"));
+	EXPECT_TRUE(game.play_notation(2, "J112"));
+	EXPECT_TRUE(game.play_notation(3, "D3"));
+
+	EXPECT_TRUE(game.play_notation(0, "82"));
+	EXPECT_TRUE(game.play_notation(1, "Q2"));
+	EXPECT_TRUE(game.play_notation(2, "91"));
+	EXPECT_TRUE(game.play_notation(3, "DQ"));
+
+	EXPECT_TRUE(game.play_notation(1, "GA"));
+	EXPECT_TRUE(game.play_notation(2, "G7"));
+	EXPECT_TRUE(game.play_notation(3, "GK"));
+	EXPECT_TRUE(game.play_notation(0, "GA"));
+
+	EXPECT_TRUE(game.play_notation(1, "727"));
+	EXPECT_TRUE(game.play_notation(2, "J112"));
+	EXPECT_TRUE(game.play_notation(3, "K#"));
+	EXPECT_TRUE(game.play_notation(0, "XK#"));
+
+	EXPECT_TRUE(game.play_notation(1, "A'2"));
+	EXPECT_TRUE(game.play_notation(2, "51"));
+	EXPECT_TRUE(game.play_notation(3, "X4'2"));
+	EXPECT_TRUE(game.play_notation(0, "4'2"));
+
+	EXPECT_TRUE(game.play_notation(1, "Q2"));
+	EXPECT_TRUE(game.play_notation(2, "A#"));
+	EXPECT_TRUE(game.play_notation(3, "52"));
+	EXPECT_TRUE(game.play_notation(0, "52"));
+
+	EXPECT_TRUE(game.play_notation(1, "4'3"));
+	EXPECT_TRUE(game.play_notation(2, "51"));
+	EXPECT_TRUE(game.play_notation(3, "711212'5"));
+	EXPECT_TRUE(game.play_notation(0, "70111211'4"));
+
+	EXPECT_TRUE(game.play_notation(1, "83"));
+	EXPECT_TRUE(game.play_notation(2, "22"));
+	EXPECT_TRUE(game.play_notation(3, "A#"));
+	EXPECT_TRUE(game.play_notation(0, "DQ"));
+
+	EXPECT_TRUE(game.play_notation(1, "K3"));
+	EXPECT_TRUE(game.play_notation(2, "K#"));
+	EXPECT_TRUE(game.play_notation(3, "83"));
+	// Here reshuffling of the deck occurs
+	EXPECT_TRUE(game.play_notation(0, "DJ"));
+	// Second shuffle must result in "AX9KA79TX876T47668AJQJAQXAJ7XX43KT2A8Q5A6K97T83524QQ4456Q68T4QTT5475526475A89QJAQ9JQJ6JA94KA48Q227T8X7357K785TK679793266326QK2586KJ6TK9JTJ38X329JJ235X38593K98JJ247A2TQ2483T4J948A9XTXTQX3Q39J349Q6K57K5452AXA7T5K83KA62K"
+
+	// This is a hack to make this test independent of the shuffling algorithm
+	game.cards_state.reset();
+	game.cards_state.deck.set_cards("76TT82AX9KA79TX876T47668AJQJAQXAJ7XX43KT2A8Q5A6K97T83524QQ4456Q68T4QTT5475526475A89QJAQ9JQJ6JA94KA48Q227T8X7357K785TK679793266326QK2586KJ6TK9JTJ38X329JJ235X38593K98JJ247A2TQ2483T4J948A9XTXTQX3Q39J349Q6K57K5452AXA7T5K83KA62K");
+	game.cards_state.hand_out_cards(5);
+
+	EXPECT_TRUE(game.play_notation(2, "GA"));
+	EXPECT_TRUE(game.play_notation(3, "G7"));
+	EXPECT_TRUE(game.play_notation(0, "G7"));
+	EXPECT_TRUE(game.play_notation(1, "GX"));
+
+	EXPECT_TRUE(game.play_notation(2, "X4'3"));
+	EXPECT_TRUE(game.play_notation(3, "XJ321"));
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+	EXPECT_TRUE(game.play_notation(1, "K#"));
+
+	EXPECT_TRUE(game.play_notation(2, "717"));
+	EXPECT_TRUE(game.play_notation(3, "D6"));
+	EXPECT_TRUE(game.play_notation(0, "T3"));
+	EXPECT_TRUE(game.play_notation(1, "A'2"));
+
+	EXPECT_TRUE(game.play_notation(2, "71423"));
+	EXPECT_TRUE(game.play_notation(3, "D8"));
+	EXPECT_TRUE(game.play_notation(0, "D6"));
+	EXPECT_TRUE(game.play_notation(1, "93"));
+
+	EXPECT_TRUE(game.play_notation(2, "92"));
+	EXPECT_TRUE(game.play_notation(3, "DT"));
+	EXPECT_TRUE(game.play_notation(0, "83"));
+	EXPECT_TRUE(game.play_notation(1, "23"));
+
+	EXPECT_TRUE(game.play_notation(2, "T2"));
+	EXPECT_TRUE(game.play_notation(3, "D4"));
+	EXPECT_TRUE(game.play_notation(0, "T3"));
+	EXPECT_TRUE(game.play_notation(1, "737"));
+
+	EXPECT_TRUE(game.play_notation(3, "GX"));
+	EXPECT_TRUE(game.play_notation(0, "G7"));
+	EXPECT_TRUE(game.play_notation(1, "GA"));
+	EXPECT_TRUE(game.play_notation(2, "GA"));
+
+	EXPECT_TRUE(game.play_notation(3, "A#"));
+	EXPECT_TRUE(game.play_notation(0, "A#"));
+	EXPECT_TRUE(game.play_notation(1, "J322"));
+	EXPECT_TRUE(game.play_notation(2, "XJ213"));
+
+	EXPECT_TRUE(game.play_notation(3, "X4'3"));
+	EXPECT_TRUE(game.play_notation(0, "63"));
+	EXPECT_TRUE(game.play_notation(1, "J322"));
+	EXPECT_TRUE(game.play_notation(2, "A#"));
+
+	EXPECT_TRUE(game.play_notation(3, "7353'2"));
+	EXPECT_TRUE(game.play_notation(0, "83"));
+	EXPECT_TRUE(game.play_notation(1, "XA'3"));
+
+	EXPECT_EQ(game.result(), 1);
 }

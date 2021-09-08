@@ -463,7 +463,10 @@ class BoardState {
 				assert(piece->position.area == Finish);
 
 				bool legal = check_move_in_finish(piece->player, piece->position.idx, count, position_result);
-				if (!legal) return false;
+
+				if (!legal) {
+					return false;
+				}
 			}
 
 			if (modify_state) {

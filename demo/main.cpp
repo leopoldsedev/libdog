@@ -6,6 +6,7 @@
 
 #include "DogGame.hpp"
 #include "Notation.hpp"
+#include "Debug.hpp"
 
 #define sleep(x) (std::this_thread::sleep_for(std::chrono::milliseconds(x)))
 
@@ -27,9 +28,11 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 
 		actions_sum += actions.size();
 
+		int player_notation = game.switch_to_team_mate_if_done(game.player_turn);
+
 		for (std::size_t i = 0; i < actions.size(); i++) {
 			ActionVar action = actions.at(i);
-			std::cout << i << ": " << to_notation(game.player_turn, action) << std::endl;
+			std::cout << i << ": " << to_notation(player_notation, action) << std::endl;
 		}
 
 		std::size_t selection = 0;
@@ -38,7 +41,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 //        } while (selection >= actions.size());
 
 		ActionVar action = actions.at(selection);
-		std::cout << "Player " << game.player_turn << " is playing " << to_notation(game.player_turn, action) << std::endl;
+		std::cout << "Player " << game.player_turn << " is playing " << to_notation(player_notation, action) << std::endl;
 
 //        std::cin.get();
 

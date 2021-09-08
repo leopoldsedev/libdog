@@ -3,8 +3,10 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <random>
 
 #include "Card.hpp"
+#include "Debug.hpp"
 
 #define DECK_COUNT (2)
 #define JOKER_COUNT (3 * DECK_COUNT)
@@ -13,13 +15,32 @@
 // TODO Currently the deck assumes that it is only reshuffled after all cards that were drawn have been played. If this assumption is violated it may happen that cards are given out again even though they have not been played, yet.
 // TODO Track suites as well to make library usable for full game interfaces
 class Deck {
+	std::default_random_engine rng;
+
 	std::vector<Card> cards = {};
 	std::vector<Card> drawn = {};
 
 	public:
 		Deck() {
+#ifndef NDEBUG
+			rng = std::default_random_engine(0);
+#else
+			std::random_device r;
+			rng = std::default_random_engine(r());
+#endif
+
 			add_cards();
 			shuffle();
+		}
+
+		void set_cards(std::string card_str) {
+			cards.clear();
+			drawn.clear();
+
+			for (char c : card_str) {
+				Card card = card_from_string(std::string(1, c));
+				cards.insert(cards.begin(), card);
+			}
 		}
 
 		Card draw() {
@@ -39,8 +60,6 @@ class Deck {
 		}
 
 		void reset() {
-			cards = drawn;
-
 			while (drawn.size() > 0) {
 				Card card = drawn.back();
 				drawn.pop_back();
@@ -49,7 +68,7 @@ class Deck {
 		}
 
 		void shuffle() {
-			std::random_shuffle(cards.begin(), cards.end());
+			std::shuffle(cards.begin(), cards.end(), rng);
 		}
 
 		void print_state() {

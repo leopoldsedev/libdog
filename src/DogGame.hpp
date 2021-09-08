@@ -48,13 +48,17 @@ class DogGame {
 		DogGame(bool check_turns, bool check_hands) : DogGame(check_turns, check_hands, false) {
 		}
 
-		DogGame() : DogGame(true, true) {
+		DogGame() : DogGame(true, true, true) {
 		}
 
 		void reset() {
 			board_state = BoardState();
 			cards_state = CardsState();
 
+			_reset();
+		}
+
+		void _reset() {
 			player_turn = 0;
 			next_hand_size = 6;
 
@@ -62,6 +66,12 @@ class DogGame {
 			next_hand_size = calc_next_hand_size(next_hand_size);
 
 			give_buffer.fill(None);
+		}
+
+		void reset_with_deck(std::string card_str) {
+			cards_state.reset();
+			cards_state.deck.set_cards(card_str);
+			_reset();
 		}
 
 		void load_board(std::string notation_str) {
@@ -119,20 +129,16 @@ class DogGame {
 			return true;
 		}
 
-		bool check_common(int player, const ActionVar& action) {
+		bool check_common(int player, const ActionVar& action, bool check_give) {
 			if (result() >= 0) {
 				// Game is already over
 				return false;
 			}
 
-			if (check_give_phase) {
+			if (check_give) {
 				if (!give_phase_completed()) {
 					return false;
 				}
-			}
-
-			if (!action_is_valid(action)) {
-				return false;
 			}
 
 			if (check_turns) {
@@ -174,44 +180,70 @@ class DogGame {
 		}
 
 		bool play_notation(int player, std::string notation_str, bool modify_state = true) {
-			optional<ActionVar> action = try_parse_notation(player, notation_str);
+			int player_notation = switch_to_team_mate_if_done(player);
+
+			optional<ActionVar> action = try_parse_notation(player_notation, notation_str);
 
 			if (action.has_value()) {
-				return play(player, action.value(), modify_state);
+				return play(player, action.value(), modify_state, true);
 			} else {
 				return false;
 			}
 		}
 
-		bool play(int player, ActionVar action, bool modify_state = true) {
-			// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
-			if (MATCH(&action, Give, a)) {
-				return try_play(player, *a, modify_state);
-			} else if (MATCH(&action, Discard, a)) {
-				return try_play(player, *a, modify_state);
-			} else if (MATCH(&action, Swap, a)) {
-				return try_play(player, *a, modify_state);
-			} else if (MATCH(&action, Move, a)) {
-				return try_play(player, *a, modify_state);
-			} else if (MATCH(&action, MoveMultiple, a)) {
-				return try_play(player, *a, modify_state);
-			} else if (MATCH(&action, Start, a)) {
-				return try_play(player, *a, modify_state);
-			}
-			assert(false);
-		}
+		bool play(int player, ActionVar action, bool modify_state = true, bool common_checks = true) {
+			bool legal;
 
-		bool try_play(int player, const Give& give, bool modify_state = true) {
-			// TODO This is a rather crude way of not checking give_phase. Add parameter to check_commong() or something similar instead
-			bool check_give_phase_state = check_give_phase;
-			check_give_phase = false;
-
-			if (!check_common(player, give)) {
+			if (!action_is_valid(action)) {
 				return false;
 			}
 
-			check_give_phase = check_give_phase_state;
+			bool check_give;
+			// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
+			if (VAR_IS(action, Give)) {
+				check_give = false;
+			} else {
+				check_give = check_give_phase;
+			}
 
+			if (common_checks && !check_common(player, action, check_give)) {
+				return false;
+			}
+
+			// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
+			if (MATCH(&action, Give, a)) {
+				legal = try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Discard, a)) {
+				legal = try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Swap, a)) {
+				legal = try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Move, a)) {
+				legal = try_play(player, *a, modify_state);
+			} else if (MATCH(&action, MoveMultiple, a)) {
+				legal = try_play(player, *a, modify_state);
+			} else if (MATCH(&action, Start, a)) {
+				legal = try_play(player, *a, modify_state);
+			} else {
+				assert(false);
+			}
+
+			if (legal && modify_state) {
+				modify_state_common(player, action);
+			}
+
+			return legal;
+		}
+
+		int switch_to_team_mate_if_done(int player) {
+			int team_mate = GET_TEAM_PLAYER_IDX(player);
+			if (board_state.check_finish_full(player) && !board_state.check_finish_full(team_mate)) {
+				return team_mate;
+			}
+
+			return player;
+		}
+
+		bool try_play(int player, const Give& give, bool modify_state = true) {
 			Card& give_buffer_player = give_buffer.at(player);
 
 			if (give_buffer_player != None) {
@@ -239,18 +271,12 @@ class DogGame {
 						cards_state.add_card_to_hand(player_team, given_card);
 					}
 				}
-
-				modify_state_common(player, give);
 			}
 
 			return true;
 		}
 
 		bool try_play(int player, const Discard& discard, bool modify_state = true) {
-			if (!check_common(player, discard)) {
-				return false;
-			}
-
 			std::vector<ActionVar> possible_card_plays = get_possible_card_plays(player);
 			if (possible_card_plays.size() > 0) {
 				// Can only discard a card if none of them can be played
@@ -265,54 +291,47 @@ class DogGame {
 			}
 
 			// Card will be removed from hand in modify_state_common()
-			if (modify_state) {
-				modify_state_common(player, discard);
-			}
 
 			return true;
 		}
 
 		bool try_play(int player, const Start& start, bool modify_state = true) {
-			if (!check_common(player, start)) {
-				return false;
-			}
+			player = switch_to_team_mate_if_done(player);
 
 			bool legal = board_state.start_piece(player, modify_state);
-
-			if (legal && modify_state) {
-				modify_state_common(player, start);
-			}
 
 			return legal;
 		}
 
 		bool try_play(int player, const Move& move, bool modify_state = true) {
-			if (!check_common(player, move)) {
-				return false;
-			}
+			player = switch_to_team_mate_if_done(player);
 
 			int count = move.get_count();
 			bool avoid_finish = move.get_avoid_finish();
 
 			PiecePtr& piece = board_state.ref_to_piece(move.get_piece_ref());
 
-			bool legal = board_state.move_piece(piece, count, avoid_finish, modify_state, false);
-
-			if (legal && modify_state) {
-				modify_state_common(player, move);
+			if (piece->player != player) {
+				return false;
 			}
+
+			bool legal = board_state.move_piece(piece, count, avoid_finish, modify_state, false);
 
 			return legal;
 		}
 
 		bool try_play(int player, const MoveMultiple& move_multiple, bool modify_state = true) {
-			if (!check_common(player, move_multiple)) {
-				return false;
-			}
+			player = switch_to_team_mate_if_done(player);
 
-			// TODO Make this rule configurable
 			for (MoveSpecifier move_specifier : move_multiple.get_move_specifiers()) {
 				PiecePtr& piece = board_state.ref_to_piece(move_specifier.piece_ref);
+
+				if (piece->player != player && piece->player != GET_TEAM_PLAYER_IDX(player)) {
+					// Can only move pieces of player or team mate
+					return false;
+				}
+
+				// TODO Make this rule configurable
 				if (piece->player != player && piece->blocking) {
 					// Cannot move pieces of team mate that are currently blocking
 					return false;
@@ -321,26 +340,21 @@ class DogGame {
 
 			bool legal = board_state.move_multiple_pieces(move_multiple.get_move_specifiers(), modify_state);
 
-			if (legal && modify_state) {
-				modify_state_common(player, move_multiple);
-			}
-
 			return legal;
 		}
 
 		bool try_play(int player, const Swap& swap, bool modify_state = true) {
-			if (!check_common(player, swap)) {
-				return false;
-			}
+			player = switch_to_team_mate_if_done(player);
 
 			PiecePtr& piece_1 = board_state.ref_to_piece(swap.get_piece_1());
 			PiecePtr& piece_2 = board_state.ref_to_piece(swap.get_piece_2());
 
-			bool legal = board_state.swap_pieces(piece_1, piece_2, modify_state);
-
-			if (legal && modify_state) {
-				modify_state_common(player, swap);
+			if (piece_1->player != player && piece_2->player != player) {
+				// One of the pieces has to belong to the player that is playing the swap
+				return false;
 			}
+
+			bool legal = board_state.swap_pieces(piece_1, piece_2, modify_state);
 
 			return legal;
 		}
@@ -376,7 +390,7 @@ class DogGame {
 
 			Start start(card, is_joker);
 
-			bool legal = try_play(player, start, false);
+			bool legal = play(player, start, false, false);
 			if (legal) {
 				result.push_back(start);
 			}
@@ -397,7 +411,7 @@ class DogGame {
 
 				Move move(card, piece_ref, count, false, is_joker);
 
-				bool legal = try_play(player, move, false);
+				bool legal = play(player, move, false, false);
 				if (legal) {
 					result.push_back(move);
 				}
@@ -413,7 +427,7 @@ class DogGame {
 						// avoid_finish flag would have an effect -> add it as possible action if it is legal (i.e. if the path isn't blocked)
 						move = Move(card, piece_ref, count, true, is_joker);
 
-						legal = try_play(player, move, false);
+						legal = play(player, move, false, false);
 						if (legal) {
 							result.push_back(move);
 						}
@@ -451,7 +465,7 @@ class DogGame {
 				MoveMultiple move_mult(card, move_specifiers, is_joker);
 
 #ifndef NDEBUG
-				bool legal = try_play(player, move_mult, false);
+				bool legal = play(player, move_mult, false, false);
 				if (!legal) {
 					PRINT_DBG(board_state);
 					for (auto m : move_specifiers) {
@@ -551,7 +565,7 @@ class DogGame {
 					for (int k = 0; k < PIECE_COUNT; k++) {
 						Swap swap(card, PieceRef(player, i), PieceRef(j, k), is_joker);
 
-						bool legal = try_play(player, swap, false);
+						bool legal = play(player, swap, false, false);
 						if (legal) {
 							result.push_back(swap);
 						}
@@ -567,13 +581,14 @@ class DogGame {
 
 			std::vector<Card> cards;
 
+			int player_to_play_for = switch_to_team_mate_if_done(player);
+
 			// Process joker card if in hand
 			bool has_joker = cards_state.check_player_has_card(player, Joker);
 			if (has_joker) {
 				for (int i = Ace; i != Joker; i++) {
 					Card card = static_cast<Card>(i);
-					// TODO Switch player to team mate if player is already done
-					std::vector<ActionVar> actions = possible_actions_for_card(player, card, true);
+					std::vector<ActionVar> actions = possible_actions_for_card(player_to_play_for, card, true);
 					APPEND(result, actions);
 				}
 			}
@@ -586,8 +601,7 @@ class DogGame {
 			cards.erase(unique(cards.begin(), cards.end()), cards.end());
 
 			for (Card card : cards) {
-				// TODO Switch player to team mate if player is already done
-				std::vector<ActionVar> actions = possible_actions_for_card(player, card, false);
+				std::vector<ActionVar> actions = possible_actions_for_card(player_to_play_for, card, false);
 				APPEND(result, actions);
 			}
 
@@ -595,6 +609,13 @@ class DogGame {
 		}
 
 		std::vector<ActionVar> get_possible_actions(int player) {
+			if (result() >= 0) {
+				// Game is already over
+				return {};
+			}
+
+			// TODO Maybe also return empty set if it is not player's turn
+
 			if (!give_phase_completed()) {
 				return possible_gives(player);
 			}
