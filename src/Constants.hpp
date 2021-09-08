@@ -12,3 +12,6 @@
 
 #define IS_VALID_PLAYER(x) (0 <= x && x < PLAYER_COUNT)
 #define IS_VALID_PIECE_RANK(x) (0 <= x && x < PIECE_COUNT)
+
+
+#define RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED (true)

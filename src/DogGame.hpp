@@ -17,10 +17,6 @@
 #include "Action.hpp"
 #include "Notation.hpp"
 
-// TODO Correctly use different ways of specifying pieces/positions (BoardPosition, PieceRef, PiecePtr, path_idx, finish_idx) depending on the minimum needed for any given function
-// TODO Implement playing for team mate when a player has all pieces in the finish
-// TODO Implement notation for board state
-
 #define APPEND(x, y) do { \
 	auto b = (y); \
 	(x).insert((x).end(), b.begin(), b.end()); \
@@ -331,10 +327,11 @@ class DogGame {
 					return false;
 				}
 
-				// TODO Make this rule configurable
-				if (piece->player != player && piece->blocking) {
-					// Cannot move pieces of team mate that are currently blocking
-					return false;
+				if (!RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED) {
+					if (piece->player != player && piece->blocking) {
+						// Cannot move pieces of team mate that are currently blocking
+						return false;
+					}
 				}
 			}
 
@@ -489,33 +486,37 @@ class DogGame {
 				PiecePtr& piece = board_copy.get_piece(position);
 				assert(piece != nullptr);
 
-				if (piece->player == player || !piece->blocking) {
-					PieceRef piece_ref = std::get<0>(pieces.at(i));
-					MoveSpecifier move_specifier(piece_ref, 1, false);
+				if (!RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED) {
+					if (piece->player != player && piece->blocking) {
+						continue;
+					}
+				}
 
-					// Save all pointers to pieces to enable tracking piece positions through the following move_piece() call
-					std::vector<Piece*> piece_ptrs;
-					for (std::tuple<PieceRef, BoardPosition> t : pieces) {
-						PiecePtr& piece = board_copy.get_piece(std::get<1>(t));
-						piece_ptrs.push_back(piece.get());
+				PieceRef piece_ref = std::get<0>(pieces.at(i));
+				MoveSpecifier move_specifier(piece_ref, 1, false);
+
+				// Save all pointers to pieces to enable tracking piece positions through the following move_piece() call
+				std::vector<Piece*> piece_ptrs;
+				for (std::tuple<PieceRef, BoardPosition> t : pieces) {
+					PiecePtr& piece = board_copy.get_piece(std::get<1>(t));
+					piece_ptrs.push_back(piece.get());
+				}
+
+				bool legal = board_copy.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
+
+				if (legal) {
+					std::vector<std::tuple<PieceRef, BoardPosition>> pieces_copy = pieces;
+					for (std::size_t i = 0; i < pieces_copy.size(); i++) {
+						assert(piece_ptrs.at(i) != nullptr);
+						std::get<1>(pieces_copy.at(i)) = piece_ptrs.at(i)->position;
 					}
 
-					bool legal = board_copy.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
+					std::vector<MoveSpecifier> move_specifiers_copy = move_specifiers;
+					move_specifiers_copy.push_back(move_specifier);
 
-					if (legal) {
-						std::vector<std::tuple<PieceRef, BoardPosition>> pieces_copy = pieces;
-						for (std::size_t i = 0; i < pieces_copy.size(); i++) {
-							assert(piece_ptrs.at(i) != nullptr);
-							std::get<1>(pieces_copy.at(i)) = piece_ptrs.at(i)->position;
-						}
+					my_set s = _possible_move_multiples(player, card, board_copy, count - 1, is_joker, pieces_copy, move_specifiers_copy);
 
-						std::vector<MoveSpecifier> move_specifiers_copy = move_specifiers;
-						move_specifiers_copy.push_back(move_specifier);
-
-						my_set s = _possible_move_multiples(player, card, board_copy, count - 1, is_joker, pieces_copy, move_specifiers_copy);
-
-						result.insert(s.begin(), s.end());
-					}
+					result.insert(s.begin(), s.end());
 				}
 			}
 
@@ -532,7 +533,9 @@ class DogGame {
 			std::vector<PieceRef> piece_refs;
 
 			APPEND(piece_refs, board_state.get_pieces_in_area(player, Path));
+			APPEND(piece_refs, board_state.get_pieces_in_area(player, Finish));
 			APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Path));
+			APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Finish));
 
 			if (piece_refs.size() == 0) {
 				return {};
@@ -643,10 +646,6 @@ class DogGame {
 
 			std::vector<ActionVar> result;
 
-			// TODO This is a rather crude way of not checking hands. Add parameter to try_play() instead
-			bool check_hands_state = check_hands;
-			check_hands = false;
-
 			switch (card) {
 				case Two: case Three: case Five: case Six: case Eight: case Nine: case Ten: case Queen:
 					APPEND(result, possible_moves(player, card, simple_card_get_count(card), is_joker));
@@ -675,8 +674,6 @@ class DogGame {
 				default:
 					break;
 			}
-
-			check_hands = check_hands_state;
 
 			return result;
 		}

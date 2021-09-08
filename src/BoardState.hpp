@@ -368,7 +368,6 @@ class BoardState {
 
 			int steps_on_path;
 
-			// TODO Checking backwards here enforces a game rule and thus does not belong into this class
 			if (into_finish && !backwards) {
 				int steps_to_start = calc_steps_to_start(player, from_path_idx);
 

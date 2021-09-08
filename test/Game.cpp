@@ -34,6 +34,16 @@
 	EXPECT_EQ(to_notation(game.board_state), notation_start); \
 } while(0)
 
+#define TEST_POSSIBLE_ACTIONS(player_id, game_var_name, actions_var_name, state_results_expected_var_name) do { \
+	for (ActionVar action : actions_var_name) { \
+		DogGame game_copy = game_var_name; \
+		bool legal = game_copy.play(player_id, action, true, false); \
+ \
+		EXPECT_TRUE(legal); \
+		EXPECT_THAT(state_results_expected_var_name, testing::Contains(game_copy.board_state)); \
+	} \
+} while(0)
+
 
 bool check_state(DogGame& game) {
 	std::array<int, PLAYER_COUNT> piece_cnt;
@@ -491,8 +501,13 @@ TEST(CardTest, Seven) {
 	TEST_INVALID_MOVE_FROM("P32P35|||", 0, "71304");
 
 	TEST_MOVE_FROM_TO("P0*||P33|", 0, "7030'4", "P3||P37|");
-	TEST_INVALID_MOVE_FROM("P0*||P32*|", 0, "7030'4"); // TODO Is this correct? Are you not allowed to move your team mates piece if it is blocking?
-	TEST_INVALID_MOVE_FROM("P0||P32*|", 0, "7030'4");
+	if (!RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED) {
+		TEST_INVALID_MOVE_FROM("P0*||P32*|", 0, "7030'4");
+		TEST_INVALID_MOVE_FROM("P0||P32*|", 0, "7030'4");
+	} else {
+		TEST_MOVE_FROM_TO("P0*||P32*|", 0, "7030'4", "P3||P36|");
+		TEST_MOVE_FROM_TO("P0||P32*|", 0, "7030'4", "F2||P36|");
+	}
 }
 
 TEST(CardTest, IntoFinishFlag) {
@@ -939,38 +954,259 @@ TEST(PossibleAction, SevenSimple) {
 }
 
 TEST(PossibleAction, SevenBlockades) {
-	GTEST_SKIP();
 	DogGame game(false, false, false);
 	std::vector<ActionVar> actions;
 
-	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 0)), BoardPosition(12));
-	game.board_state.start_piece(1);
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  3
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    0 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// 2  . . . .                     . . . .  3
+	// 1 /                                     .
+	// 1 . . . .                       . . . . .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    . 2 2 2    2
+	game.load_board("P12F3|P15P16*|P14|P46P58");
+	actions = game.possible_actions_for_card(2, Seven, false);
+	EXPECT_EQ(actions.size(), 0);
+
+	std::vector<BoardState> state_results_expected;
+
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  3               .
+	//               .    . 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12P46|P16*P43F2F3||P15P56F3");
+	actions = game.possible_actions_for_card(2, Seven, false);
+	EXPECT_EQ(actions.size(), 4);
+
+	state_results_expected = {
+		from_notation("P12P53|P16*P43F2F3||P15P56F3"),
+		from_notation("P13P52|P16*P43F2F3||P15P56F3"),
+		from_notation("P14P51|P16*P43F2F3||P15P56F3"),
+		from_notation("P15P50|P16*P43F2F3||P56F3"),
+	};
+
+	TEST_POSSIBLE_ACTIONS(2, game, actions, state_results_expected);
+
+	// 0    0 . . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  3               .
+	//               .    0 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12P46F3|P16*P43F2F3||P15P56F3");
+	actions = game.possible_actions_for_card(2, Seven, false);
+	EXPECT_EQ(actions.size(), 4);
+
+	state_results_expected = {
+		from_notation("P12P53F3|P16*P43F2F3||P15P56F3"),
+		from_notation("P13P52F3|P16*P43F2F3||P15P56F3"),
+		from_notation("P14P51F3|P16*P43F2F3||P15P56F3"),
+		from_notation("P15P50F3|P16*P43F2F3||P56F3"),
+	};
+
+	TEST_POSSIBLE_ACTIONS(2, game, actions, state_results_expected);
+
+	game.load_board("P46F2|P16*P43F2F3||P15P56F3");
+	actions = game.possible_actions_for_card(2, Seven, false);
+	EXPECT_EQ(actions.size(), 2);
+
+	state_results_expected = {
+		from_notation("P53F2|P16*P43F2F3||P15P56F3"),
+		from_notation("P52F3|P16*P43F2F3||P15P56F3"),
+	};
+
+	TEST_POSSIBLE_ACTIONS(2, game, actions, state_results_expected);
+
+	// 0    . . . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  0 1  .               3
+	//                 .  . 2  3               .
+	//               .    0 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12P46F1F3|P16*P43F2F3||P15P56F3");
+
+	actions = game.possible_actions_for_card(2, Seven, false);
+	EXPECT_EQ(actions.size(), 8);
+
+	state_results_expected = {
+		from_notation("P12P53F1F3|P16*P43F2F3||P15P56F3"),
+
+		from_notation("P12P52F2F3|P16*P43F2F3||P15P56F3"),
+		from_notation("P13P52F1F3|P16*P43F2F3||P15P56F3"),
+
+		from_notation("P13P51F2F3|P16*P43F2F3||P15P56F3"),
+		from_notation("P14P51F1F3|P16*P43F2F3||P15P56F3"),
+
+		from_notation("P14P50F2F3|P16*P43F2F3||P15P56F3"),
+		from_notation("P15P50F1F3|P16*P43F2F3||P56F3"),
+
+		from_notation("P15P49F2F3|P16*P43F2F3||P56F3"),
+	};
+
+	TEST_POSSIBLE_ACTIONS(2, game, actions, state_results_expected);
+
+	// 0    0 0 0 .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// 1 . . . .                       . . . . .
+	// *         .                   .
+	// .           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12|P16*||");
 
 	actions = game.possible_actions_for_card(0, Seven, false);
 	EXPECT_EQ(actions.size(), 0);
 
-	game.board_state.start_piece(2);
+	// 0    0 0 0 .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// 1 . . . .                       . . . . .
+	// *         .                   .
+	// .           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . 2*   . 2 2 2    2
+	game.load_board("P12|P16*|P32*|");
 
 	actions = game.possible_actions_for_card(0, Seven, false);
 	EXPECT_EQ(actions.size(), 4);
 
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'7")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 0'6")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 0'5")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 0'4")));
+	state_results_expected = {
+		from_notation("P12|P16*|P39|"),
+		from_notation("P13|P16*|P38|"),
+		from_notation("P14|P16*|P37|"),
+		from_notation("P15|P16*|P36|"),
+	};
 
-	game.reset();
+	TEST_POSSIBLE_ACTIONS(0, game, actions, state_results_expected);
 
-	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, 0, 0)), BoardPosition(28));
-	game.board_state.start_piece(6);
 
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'7")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 01 0'6")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 02 0'5")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 03 0'4")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 04 0'3")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'2 05")));
-	EXPECT_THAT(actions, testing::Contains(from_notation(0, "7 0'1 06")));
+	// 0    0 0 0 .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// . . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// . . . . .                       . . . . .
+	//           .                   .
+	// 1           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               0 . . . 2*   . 2 2 2    2
+	game.load_board("P28||P32*|");
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	EXPECT_EQ(actions.size(), 7);
+
+	state_results_expected = {
+		from_notation("P28||P39|"),
+		from_notation("P29||P38|"),
+		from_notation("P30||P37|"),
+		from_notation("P31||P36|"),
+		from_notation("P32||P35|"),
+		from_notation("P33||P34|"),
+		from_notation("P34|||"),
+	};
+
+	TEST_POSSIBLE_ACTIONS(0, game, actions, state_results_expected);
 }
 
 TEST(FullGameTest, WinCondition) {
