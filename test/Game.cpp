@@ -45,6 +45,7 @@
 } while(0)
 
 
+// TODO Check that kennel order is kept
 bool check_state(DogGame& game) {
 	std::array<int, PLAYER_COUNT> piece_cnt;
 	piece_cnt.fill(0);
@@ -248,16 +249,6 @@ TEST(BasicTest, Blockades) {
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 }
 
-TEST(PrimitiveTest, Authorization) {
-	DogGame game(false, false, false);
-
-	EXPECT_TRUE(game.play(0, Start(Ace)));
-	EXPECT_TRUE(game.play(1, Start(Ace)));
-
-	EXPECT_FALSE(game.play(0, Move(Ace, PieceRef(1, 0), 1, false)));
-	// TODO Check this for all other actions (that player is not allowed to move all pieces
-}
-
 TEST(BasicTest, PieceRefResolution) {
 	DogGame game(false, false, false);
 
@@ -290,11 +281,26 @@ TEST(BasicTest, PieceRefResolution) {
 	EXPECT_EQ(game.board_state.ref_to_pos(PieceRef(player, 3)), pos3);
 }
 
-TEST(CardTest, MovePiece) {
+TEST(PrimitiveTest, Authorization) {
 	DogGame game(false, false, false);
 
+	EXPECT_TRUE(game.play(0, Start(Ace)));
+	EXPECT_TRUE(game.play(1, Start(Ace)));
+
+	EXPECT_FALSE(game.play(0, Move(Ace, PieceRef(1, 0), 1, false)));
+	// TODO Check this for all other actions (that player is not allowed to move all pieces
+}
+
+TEST(CardTest, MovePiece) {
 	TEST_MOVE_FROM_TO("|||", 0, "A#", "P0*|||");
 	TEST_MOVE_FROM_TO("P0*|||", 0, "20", "P2|||");
+}
+
+TEST(CardTest, Start) {
+	TEST_MOVE_FROM_TO("|||", 0, "A#", "P0*|||");
+	TEST_MOVE_FROM_TO("P0*|||", 1, "K#", "P0*|P16*||");
+	TEST_MOVE_FROM_TO("P0*|P16*||", 2, "XA#", "P0*|P16*|P32*|");
+	TEST_MOVE_FROM_TO("P0*|P16*|P32*|", 3, "XK#", "P0*|P16*|P32*|P48*");
 }
 
 TEST(CardTest, StartInvalid) {
@@ -308,169 +314,52 @@ TEST(CardTest, StartInvalid) {
 }
 
 TEST(CardTest, Finish) {
-	DogGame game(false, false, false);
+	TEST_MOVE_FROM_TO("|||", 0, "K#", "P0*|||");
+	TEST_MOVE_FROM_TO("P0*|||", 0, "Q0", "P12|||");
+	TEST_MOVE_FROM_TO("P12|||", 0, "Q0", "P24|||");
+	TEST_MOVE_FROM_TO("P24|||", 0, "Q0", "P36|||");
+	TEST_MOVE_FROM_TO("P36|||", 0, "Q0", "P48|||");
+	TEST_MOVE_FROM_TO("P48|||", 0, "Q0", "P60|||");
+	TEST_MOVE_FROM_TO("P60|||", 0, "50", "F0|||");
+	TEST_MOVE_FROM_TO("P60|||", 0, "90", "P5|||");
+	TEST_MOVE_FROM_TO("F0|||", 0, "30", "F3|||");
 
-	EXPECT_TRUE(game.play_notation(0, "K#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(0), nullptr);
+	TEST_INVALID_MOVE_FROM("F0|||", 0, "40");
+	TEST_INVALID_MOVE_FROM("F0|||", 0, "4'0");
+	TEST_INVALID_MOVE_FROM("F3|||", 0, "4'0");
 
-	EXPECT_TRUE(game.play_notation(0, "Q0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(12), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "Q0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(24), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "Q0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(36), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "Q0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(48), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "Q0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(60), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "50"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.finishes.at(0).at(0), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "30"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.finishes.at(0).at(3), nullptr);
+	TEST_MOVE_FROM_TO("P2|||", 0, "4'0", "P62|||");
 }
 
 TEST(CardTest, BackwardStartFinish) {
-	DogGame game(false, false, false);
-
-	EXPECT_TRUE(game.play_notation(0, "A#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(0), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "4'0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.path.at(60), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "80"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_NE(game.board_state.finishes.at(0).at(3), nullptr);
+	TEST_MOVE_FROM_TO("|||", 0, "A#", "P0*|||");
+	TEST_MOVE_FROM_TO("P0*|||", 0, "4'0", "P60|||");
+	TEST_MOVE_FROM_TO("P60|||", 0, "80", "F3|||");
 }
 
 TEST(CardTest, NoFinishFromStart) {
-	DogGame game(false, false, false);
-
-	EXPECT_TRUE(game.play_notation(0, "A#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "40"));
-	EXPECT_TRUE(check_state(game));
-
-	EXPECT_NE(game.board_state.path.at(4), nullptr);
+	TEST_MOVE_FROM_TO("P0*|||", 0, "40", "P4|||");
 }
 
 TEST(CardTest, SendToKennel) {
-	DogGame game(false, false, false);
+	TEST_MOVE_FROM_TO("P12|P17||", 0, "50", "P17|||");
+	TEST_MOVE_FROM_TO("P22|P12||", 1, "T0", "|P22||");
+	TEST_MOVE_FROM_TO("P16|P12P22||", 1, "T0-", "P16|P22||");
+	TEST_MOVE_FROM_TO("P16|P22||", 1, "K#", "|P16*P22||");
 
-	EXPECT_TRUE(game.play_notation(0, "A#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "A#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "Q0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "A'0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "50"));
-	EXPECT_TRUE(check_state(game));
-
-	EXPECT_PLAYER_AT(17, 0);
-	EXPECT_NE(game.board_state.kennels.at(1).at(0), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
-
-	EXPECT_TRUE(game.play_notation(1, "K#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "30"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "4'0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "20"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "T0"));
-	EXPECT_TRUE(check_state(game));
-
-	EXPECT_PLAYER_AT(22, 1);
-	EXPECT_NE(game.board_state.kennels.at(0).at(0), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(0).at(1), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(0).at(2), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(0).at(3), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "XA#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "K#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "XA0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "4'1"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(0, "X50"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "T0-"));
-	EXPECT_TRUE(check_state(game));
-
-	EXPECT_PLAYER_AT(16, 0);
-	EXPECT_PLAYER_AT(22, 1);
-	EXPECT_EQ(game.board_state.kennels.at(1).at(0), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(1).at(1), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(1).at(2), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(1).at(3), nullptr);
-
-	EXPECT_TRUE(game.play_notation(0, "K#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "K#"));
-	EXPECT_TRUE(check_state(game));
-
-	EXPECT_PLAYER_AT(16, 1);
-	EXPECT_EQ(game.board_state.kennels.at(0).at(0), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(0).at(1), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(0).at(2), nullptr);
-	EXPECT_NE(game.board_state.kennels.at(0).at(3), nullptr);
+	TEST_MOVE_FROM_TO("P16|P22||", 0, "707", "P23|||");
+	TEST_MOVE_FROM_TO("P15|P22||", 0, "707", "P22|||");
+	TEST_MOVE_FROM_TO("P5P21P37P53|P6P22P38P54||", 0, "702122231", "P6P23P39P55|||");
+	TEST_MOVE_FROM_TO("P5P21P37P53|P7P23P39P55||", 0, "702122231", "P6P23P39P55|P7||");
 }
 
 TEST(CardTest, Swap) {
-	DogGame game(false, false, false);
+	TEST_INVALID_MOVE_FROM("P0*|P16*||", 0, "J010");
+	TEST_INVALID_MOVE_FROM("P0|P16*||", 0, "J010");
+	TEST_INVALID_MOVE_FROM("P0*|P16||", 0, "J010");
 
-	EXPECT_TRUE(game.play_notation(0, "A#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_TRUE(game.play_notation(1, "A#"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_EQ(game.board_state.path.at(0)->blocking, true);
-	EXPECT_EQ(game.board_state.path.at(16)->blocking, true);
-
-	EXPECT_FALSE(game.play_notation(0, "J010"));
-
-	EXPECT_TRUE(game.play_notation(0, "A'0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_EQ(game.board_state.path.at(1)->blocking, false);
-	EXPECT_EQ(game.board_state.path.at(16)->blocking, true);
-
-	EXPECT_FALSE(game.play_notation(0, "J010"));
-
-	EXPECT_TRUE(game.play_notation(1, "A'0"));
-	EXPECT_TRUE(check_state(game));
-	EXPECT_EQ(game.board_state.path.at(1)->blocking, false);
-	EXPECT_EQ(game.board_state.path.at(17)->blocking, false);
-
-	EXPECT_PLAYER_AT(1, 0);
-	EXPECT_PLAYER_AT(17, 1);
-
-	EXPECT_TRUE(game.play_notation(0, "J010"));
-	EXPECT_TRUE(check_state(game));
-
-	EXPECT_PLAYER_AT(1, 1);
-	EXPECT_PLAYER_AT(17, 0);
+	TEST_MOVE_FROM_TO("P1|P17||", 0, "J010", "P17|P1||");
+	TEST_MOVE_FROM_TO("P17|P1||", 1, "J000", "P1|P17||");
 }
 
 TEST(CardTest, Seven) {
@@ -528,98 +417,55 @@ TEST(CardTest, IntoFinishFlag) {
 
 	int player = 0;
 
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "80"));
-	EXPECT_NE(game.board_state.get_piece(BoardPosition(Finish, player, 3)), nullptr);
+	TEST_MOVE_FROM_TO("P60|||", player, "80", "F3|||");
+	TEST_MOVE_FROM_TO("P60|||", player, "80-", "P4|||");
+	TEST_MOVE_FROM_TO("P60|||", player, "30", "P63|||");
+	TEST_MOVE_FROM_TO("P60|||", player, "30-", "P63|||");
 
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "80-"));
-	EXPECT_PLAYER_AT(4, 0);
+	TEST_INVALID_MOVE_FROM("P0*P60|||", player, "T0");
+	TEST_INVALID_MOVE_FROM("P0*P60|||", player, "T0-");
+	TEST_INVALID_MOVE_FROM("P0*P60|||", player, "80");
+	TEST_INVALID_MOVE_FROM("P0*P60|||", player, "80-");
 
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "30"));
-	EXPECT_PLAYER_AT(63, 0);
-
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "30-"));
-	EXPECT_PLAYER_AT(63, 0);
-
-	EXPECT_TRUE(game.play_notation(player, "A#"));
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(60));
-	EXPECT_FALSE(game.play_notation(player, "T0"));
-	EXPECT_FALSE(game.play_notation(player, "T0-"));
-	EXPECT_FALSE(game.play_notation(player, "80-"));
-	EXPECT_FALSE(game.play_notation(player, "80"));
-
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 0)), BoardPosition(Finish, player, 1));
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 1)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "81"));
-	EXPECT_PLAYER_AT(4, 0);
-
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 1)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "81-"));
-	EXPECT_PLAYER_AT(4, 0);
-
-	game.board_state.move_piece(game.board_state.ref_to_piece(PieceRef(player, 1)), BoardPosition(60));
-	EXPECT_TRUE(game.play_notation(player, "51"));
-	EXPECT_NE(game.board_state.get_piece(BoardPosition(Finish, player, 0)), nullptr);
+	TEST_MOVE_FROM_TO("P60F1|||", player, "81", "P4F1|||");
+	TEST_MOVE_FROM_TO("P60F1|||", player, "81-", "P4F1|||");
+	TEST_MOVE_FROM_TO("P60F1|||", player, "51", "F0F1|||");
+	TEST_MOVE_FROM_TO("P60F1|||", player, "51-", "P1F1|||");
 }
 
 TEST(CardTest, MoveInFinish) {
 	DogGame game(false, false, false);
 
 	int player = 3;
-	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, player, 0)), BoardPosition(Finish, player, 2));
-	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, player, 1)), BoardPosition(Finish, player, 1));
-	game.board_state.move_piece(game.board_state.get_piece(BoardPosition(Kennel, player, 2)), BoardPosition(Finish, player, 0));
 
-	EXPECT_FALSE(game.play_notation(player, "A'1"));
-	EXPECT_FALSE(game.play_notation(player, "A'2"));
-	EXPECT_FALSE(game.play_notation(player, "A'3"));
-	EXPECT_TRUE(game.play_notation(player, "A'0"));
+	TEST_INVALID_MOVE_FROM("|||F0F1F2", player, "A'1");
+	TEST_INVALID_MOVE_FROM("|||F0F1F2", player, "A'2");
+	TEST_INVALID_MOVE_FROM("|||F0F1F2", player, "A'3");
+	TEST_MOVE_FROM_TO("|||F0F1F2", player, "A'0", "|||F0F1F3");
 
-	EXPECT_PLAYER_AT_FINISH(3, player);
-	EXPECT_PLAYER_AT_FINISH(1, player);
-	EXPECT_PLAYER_AT_FINISH(0, player);
+	TEST_INVALID_MOVE_FROM("|||F0F1F3", player, "A'0");
+	TEST_INVALID_MOVE_FROM("|||F0F1F3", player, "A'2");
+	TEST_INVALID_MOVE_FROM("|||F0F1F3", player, "A'3");
+	TEST_MOVE_FROM_TO("|||F0F1F3", player, "A'1", "|||F0F2F3");
 
-	EXPECT_FALSE(game.play_notation(player, "A'0"));
-	EXPECT_FALSE(game.play_notation(player, "A'2"));
-	EXPECT_FALSE(game.play_notation(player, "A'3"));
-	EXPECT_TRUE(game.play_notation(player, "A'1"));
+	TEST_INVALID_MOVE_FROM("|||F0F2F3", player, "A'0");
+	TEST_INVALID_MOVE_FROM("|||F0F2F3", player, "A'1");
+	TEST_INVALID_MOVE_FROM("|||F0F2F3", player, "A'3");
+	TEST_MOVE_FROM_TO("|||F0F2F3", player, "A'2", "|||F1F2F3");
 
-	EXPECT_PLAYER_AT_FINISH(3, player);
-	EXPECT_PLAYER_AT_FINISH(2, player);
-	EXPECT_PLAYER_AT_FINISH(0, player);
+	TEST_INVALID_MOVE_FROM("|||F1F2F3", player, "A'0");
+	TEST_INVALID_MOVE_FROM("|||F1F2F3", player, "A'1");
+	TEST_INVALID_MOVE_FROM("|||F1F2F3", player, "A'2");
+	TEST_INVALID_MOVE_FROM("|||F1F2F3", player, "A'3");
+	TEST_MOVE_FROM_TO("|||F1F2F3", player, "A#", "|||P48*F1F2F3");
 
-	EXPECT_FALSE(game.play_notation(player, "A'0"));
-	EXPECT_FALSE(game.play_notation(player, "A'1"));
-	EXPECT_FALSE(game.play_notation(player, "A'3"));
-	EXPECT_TRUE(game.play_notation(player, "A'2"));
-
-	EXPECT_PLAYER_AT_FINISH(3, player);
-	EXPECT_PLAYER_AT_FINISH(2, player);
-	EXPECT_PLAYER_AT_FINISH(1, player);
-
-	EXPECT_FALSE(game.play_notation(player, "A'0"));
-	EXPECT_FALSE(game.play_notation(player, "A'1"));
-	EXPECT_FALSE(game.play_notation(player, "A'2"));
-	EXPECT_TRUE(game.play_notation(player, "A#"));
-
-	EXPECT_PLAYER_AT(48, player);
-
-	EXPECT_FALSE(game.play_notation(player, "A'0"));
-	EXPECT_FALSE(game.play_notation(player, "A'1"));
-	EXPECT_FALSE(game.play_notation(player, "A'2"));
-	EXPECT_TRUE(game.play_notation(player, "A'3"));
-
-	EXPECT_PLAYER_AT(49, player);
+	TEST_INVALID_MOVE_FROM("|||P48*F1F2F3", player, "A'0");
+	TEST_INVALID_MOVE_FROM("|||P48*F1F2F3", player, "A'1");
+	TEST_INVALID_MOVE_FROM("|||P48*F1F2F3", player, "A'2");
+	TEST_MOVE_FROM_TO("|||P48*F1F2F3", player, "A'3", "|||P49F1F2F3");
 }
 
 TEST(CardTest, PlayForTeamMate) {
-	DogGame game(false, false, false);
-	std::vector<ActionVar> actions;
-
-	game.load_board("F0F1F2F3||P0|");
 	TEST_MOVE_FROM_TO("F0F1F2F3||P0|", 0, "T0", "F0F1F2F3||P10|");
 	TEST_MOVE_FROM_TO("F0F1F2F3||P0|", 0, "K#", "F0F1F2F3||P0P32*|");
 
@@ -640,13 +486,13 @@ TEST(CardTest, PlayForTeamMate) {
 
 	TEST_INVALID_MOVE_FROM("F0F1F2F3|P30F1F2F3|P26P32*P39F3|P62F3", 0, "X72'12'12'12'12'12'12'1");
 
-	DogGame game1(false, false, false);
+	DogGame game(false, false, false);
 	std::string notation_str = "F0F1F2F3|P30F1F2F3|P26P32*P39F3|P62F3";
-	game1.load_board(notation_str);
+	game.load_board(notation_str);
 	ActionVar action = from_notation(2, "X72'12'12'12'12'12'12'1");
-	EXPECT_FALSE(game1.play(0, action));
-	EXPECT_TRUE(check_state(game1));
-	EXPECT_EQ(to_notation(game1.board_state), notation_str);
+	EXPECT_FALSE(game.play(0, action));
+	EXPECT_TRUE(check_state(game));
+	EXPECT_EQ(to_notation(game.board_state), notation_str);
 
 	// TODO Add checks for possible actions
 }
