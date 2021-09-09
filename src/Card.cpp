@@ -41,3 +41,14 @@ Card card_from_string(std::string card_str) {
 std::string card_to_string(Card card) {
 	return card_to_str.at(card);
 }
+
+std::vector<Card> cards_from_str(std::string card_str) {
+	std::vector<Card> cards;
+
+	for (char c : card_str) {
+		Card card = card_from_string(std::string(1, c));
+		cards.push_back(card);
+	}
+
+	return cards;
+}

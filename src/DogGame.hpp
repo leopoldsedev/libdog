@@ -32,7 +32,7 @@ class DogGame {
 		int player_turn;
 		int next_hand_size;
 
-		std::array<Card, PLAYER_COUNT> give_buffer;
+		bool give_phase_done;
 
 		BoardState board_state;
 		CardsState cards_state;
@@ -61,12 +61,12 @@ class DogGame {
 			cards_state.hand_out_cards(next_hand_size);
 			next_hand_size = calc_next_hand_size(next_hand_size);
 
-			give_buffer.fill(None);
+			give_phase_done = false;
 		}
 
 		void reset_with_deck(std::string card_str) {
-			cards_state.reset();
-			cards_state.deck.set_cards(card_str);
+			std::vector<Card> cards = cards_from_str(card_str);
+			cards_state = CardsState(cards);
 			_reset();
 		}
 
@@ -115,24 +115,15 @@ class DogGame {
 			player_turn %= PLAYER_COUNT;
 		}
 
-		bool give_phase_completed() {
-			for (Card card : give_buffer) {
-				if (card == None) {
-					return false;
-				}
-			}
-
-			return true;
-		}
-
-		bool check_common(int player, const ActionVar& action, bool check_give) {
+		bool check_common(int player, const ActionVar& action) {
 			if (result() >= 0) {
 				// Game is already over
 				return false;
 			}
 
+			bool check_give = VAR_IS(action, Give) ? false : check_give_phase;
 			if (check_give) {
-				if (!give_phase_completed()) {
+				if (!give_phase_done) {
 					return false;
 				}
 			}
@@ -158,7 +149,9 @@ class DogGame {
 		}
 
 		void modify_state_common(int player, const ActionVar& action) {
-			cards_state.remove_card_from_hand(player, action_get_card(action));
+			if (!VAR_IS(action, Give)) {
+				cards_state.discard(player, action_get_card(action));
+			}
 
 			next_turn();
 
@@ -170,8 +163,8 @@ class DogGame {
 				// Additional increment so that not the same player always starts in every round
 				next_turn();
 
-				// Reset give_buffer because every player now has to give a card to their team mate
-				give_buffer.fill(None);
+				// Every player now has to give a card to their team mate
+				give_phase_done = false;
 			}
 		}
 
@@ -194,15 +187,7 @@ class DogGame {
 				return false;
 			}
 
-			bool check_give;
-			// TODO This can be done more elegantly with visit. See https://en.cppreference.com/w/cpp/utility/variant/visit
-			if (VAR_IS(action, Give)) {
-				check_give = false;
-			} else {
-				check_give = check_give_phase;
-			}
-
-			if (common_checks && !check_common(player, action, check_give)) {
+			if (common_checks && !check_common(player, action)) {
 				return false;
 			}
 
@@ -240,9 +225,8 @@ class DogGame {
 		}
 
 		bool try_play(int player, const Give& give, bool modify_state = true) {
-			Card& give_buffer_player = give_buffer.at(player);
-
-			if (give_buffer_player != None) {
+			assert(!give_phase_done || !cards_state.give_buffer_full(player));
+			if (give_phase_done || cards_state.give_buffer_full(player)) {
 				// Player already gave
 				return false;
 			}
@@ -256,16 +240,12 @@ class DogGame {
 
 			// Card will be removed from hand in modify_state_common()
 			if (modify_state) {
-				give_buffer_player = give.get_card();
+				cards_state.give_card(player, give.get_card());
 
-				if (give_phase_completed()) {
+				if (cards_state.give_buffer_full()) {
 					// Every player gave a card, add them to the hand of their team mate
-					for (int player = 0; player < PLAYER_COUNT; player++) {
-						Card given_card = give_buffer.at(player);
-						int player_team = GET_TEAM_PLAYER_IDX(player);
-
-						cards_state.add_card_to_hand(player_team, given_card);
-					}
+					cards_state.execute_give();
+					give_phase_done = true;
 				}
 			}
 
@@ -359,8 +339,7 @@ class DogGame {
 		std::vector<ActionVar> possible_gives(int player) {
 			std::vector<ActionVar> result;
 
-			std::vector<Card> cards = cards_state.get_hand(player).cards;
-			remove_duplicates(cards);
+			std::vector<Card> cards = cards_state.get_hand_cards(player, true);
 
 			for (Card card : cards) {
 				Give give(card);
@@ -373,8 +352,7 @@ class DogGame {
 		std::vector<ActionVar> possible_discards(int player) {
 			std::vector<ActionVar> result;
 
-			std::vector<Card> cards = cards_state.get_hand(player).cards;
-			remove_duplicates(cards);
+			std::vector<Card> cards = cards_state.get_hand_cards(player, true);
 
 			for (Card card : cards) {
 				Discard discard(card);
@@ -588,7 +566,7 @@ class DogGame {
 
 			// TODO Maybe also return empty set if it is not player's turn
 
-			if (!give_phase_completed()) {
+			if (!give_phase_done) {
 				return possible_gives(player);
 			}
 
@@ -610,13 +588,10 @@ class DogGame {
 		std::vector<ActionVar> get_possible_card_plays(int player) {
 			std::vector<ActionVar> result;
 
-			std::vector<Card> cards;
-
 			int player_to_play_for = switch_to_team_mate_if_done(player);
 
 			// Process hand cards
-			cards = cards_state.get_hand(player).cards;
-			remove_duplicates(cards);
+			std::vector<Card> cards = cards_state.get_hand_cards(player, true);
 
 			for (Card card : cards) {
 				std::vector<ActionVar> actions = possible_actions_for_card(player_to_play_for, card, false);
@@ -681,19 +656,7 @@ class DogGame {
 
 			ss << "Notation: " << to_notation(board_state) << std::endl;
 
-			std::string hands_str = get_hands_str();
-			ss << hands_str;
-			return ss.str();
-		}
-
-		std::string get_hands_str() const {
-			std::stringstream ss;
-
-			for (std::size_t i = 0; i < cards_state.hands.size(); i++) {
-				ss << i << ": ";
-				ss << cards_state.hands.at(i);
-				ss << std::endl;
-			}
+			ss << cards_state;
 
 			return ss.str();
 		}

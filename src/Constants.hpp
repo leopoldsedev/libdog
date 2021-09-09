@@ -8,6 +8,9 @@
 #define FINISH_LENGTH (PIECE_COUNT)
 #define KENNEL_SIZE (PIECE_COUNT)
 
+#define DECK_COUNT (2)
+#define JOKER_COUNT (3 * DECK_COUNT)
+
 #define GET_TEAM_PLAYER_IDX(player_idx) (((player_idx) + 2) % PLAYER_COUNT)
 
 #define IS_VALID_PLAYER(x) (0 <= x && x < PLAYER_COUNT)
