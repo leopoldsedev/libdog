@@ -360,6 +360,7 @@ class DogGame {
 			std::vector<ActionVar> result;
 
 			std::vector<Card> cards = cards_state.get_hand(player).cards;
+			remove_duplicates(cards);
 
 			for (Card card : cards) {
 				Give give(card);
@@ -373,6 +374,7 @@ class DogGame {
 			std::vector<ActionVar> result;
 
 			std::vector<Card> cards = cards_state.get_hand(player).cards;
+			remove_duplicates(cards);
 
 			for (Card card : cards) {
 				Discard discard(card);
@@ -579,38 +581,6 @@ class DogGame {
 			return result;
 		}
 
-		std::vector<ActionVar> get_possible_card_plays(int player) {
-			std::vector<ActionVar> result;
-
-			std::vector<Card> cards;
-
-			int player_to_play_for = switch_to_team_mate_if_done(player);
-
-			// Process joker card if in hand
-			bool has_joker = cards_state.check_player_has_card(player, Joker);
-			if (has_joker) {
-				for (int i = Ace; i != Joker; i++) {
-					Card card = static_cast<Card>(i);
-					std::vector<ActionVar> actions = possible_actions_for_card(player_to_play_for, card, true);
-					APPEND(result, actions);
-				}
-			}
-
-			// Process hand cards
-			cards = cards_state.get_hand(player).cards;
-			// Remove duplicates
-			// Source: https://stackoverflow.com/a/1041939/3118787
-			sort(cards.begin(), cards.end());
-			cards.erase(unique(cards.begin(), cards.end()), cards.end());
-
-			for (Card card : cards) {
-				std::vector<ActionVar> actions = possible_actions_for_card(player_to_play_for, card, false);
-				APPEND(result, actions);
-			}
-
-			return result;
-		}
-
 		std::vector<ActionVar> get_possible_actions(int player) {
 			if (result() >= 0) {
 				// Game is already over
@@ -638,9 +608,27 @@ class DogGame {
 			return result;
 		}
 
-		// TODO Try removing is_joker parameter and instead just passing Joker as card
+		std::vector<ActionVar> get_possible_card_plays(int player) {
+			std::vector<ActionVar> result;
+
+			std::vector<Card> cards;
+
+			int player_to_play_for = switch_to_team_mate_if_done(player);
+
+			// Process hand cards
+			cards = cards_state.get_hand(player).cards;
+			remove_duplicates(cards);
+
+			for (Card card : cards) {
+				std::vector<ActionVar> actions = possible_actions_for_card(player_to_play_for, card, false);
+				APPEND(result, actions);
+			}
+
+			return result;
+		}
+
 		std::vector<ActionVar> possible_actions_for_card(int player, Card card, bool is_joker) {
-			if (card == None || card == Joker) {
+			if (card == None) {
 				return {};
 			}
 
@@ -670,6 +658,11 @@ class DogGame {
 					APPEND(result, possible_moves(player, card, 13, is_joker));
 					break;
 				case Joker:
+					for (int i = Ace; i != Joker; i++) {
+						Card card = static_cast<Card>(i);
+						std::vector<ActionVar> actions = possible_actions_for_card(player, card, true);
+						APPEND(result, actions);
+					}
 				case None:
 				default:
 					break;

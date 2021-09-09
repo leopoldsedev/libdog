@@ -178,7 +178,7 @@ class Move : public Action {
 			}
 
 			Card expected_card = count_to_card.at(move_specifier.count);
-			if (expected_card != card && !joker) {
+			if (expected_card != card) {
 				return false;
 			}
 
@@ -225,7 +225,7 @@ class MoveMultiple : public Action {
 
 		// TODO Check that the same piece is not references more than once in the move list
 		virtual bool is_valid() const {
-			if (card != Seven && !joker) {
+			if (card != Seven) {
 				return false;
 			}
 
@@ -272,7 +272,7 @@ class Swap : public Action {
 		}
 
 		virtual bool is_valid() const {
-			if (card != Jack && !joker) {
+			if (card != Jack) {
 				return false;
 			}
 
