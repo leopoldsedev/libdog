@@ -9,10 +9,6 @@
 
 #define IS_ACTION(x, t) (std::holds_alternative<t>(x))
 
-// TODO Are these CONCAT macros really needed?
-#define CONCAT(a, b) CONCAT_INNER(a, b)
-#define CONCAT_INNER(a, b) a ## b
-
 #define NOTATION_INVALID(player, notation) do { \
 	optional<ActionVar> var1 = try_parse_notation(player, notation); \
 	EXPECT_FALSE(var1.has_value()); \
@@ -44,38 +40,29 @@
 	NOTATION_TEST(var1, player, notation, card, Discard, is_joker); \
 } while(0)
 
-#define _START_TEST(var1, player, notation, card, is_joker) do { \
-	optional<ActionVar> var1; \
-	NOTATION_TEST(var1, player, notation, card, Start, is_joker); \
+#define START_TEST(player, notation, card, is_joker) do { \
+	optional<ActionVar> a_opt; \
+	NOTATION_TEST(a_opt, player, notation, card, Start, is_joker); \
 } while(0)
 
-#define START_TEST(player, notation, card, is_joker) \
-	_START_TEST(CONCAT(a_opt, __COUNTER__), player, notation, card, is_joker)
-
-#define _MOVE_TEST(var1, var2, player, notation, card, count, piece_rank, avoid_finish, is_joker) do { \
-	optional<ActionVar> var1; \
-	NOTATION_TEST(var1, player, notation, card, Move, is_joker); \
+#define MOVE_TEST(player, notation, card, count, piece_rank, avoid_finish, is_joker) do { \
+	optional<ActionVar> a_opt; \
+	NOTATION_TEST(a_opt, player, notation, card, Move, is_joker); \
 \
-	Move var2 = std::get<Move>(var1.value()); \
-	EXPECT_EQ(var2.get_count(), count); \
-	EXPECT_EQ(var2.get_piece_ref(), PieceRef(player, piece_rank)); \
-	EXPECT_EQ(var2.get_avoid_finish(), avoid_finish); \
+	Move move = std::get<Move>(a_opt.value()); \
+	EXPECT_EQ(move.get_count(), count); \
+	EXPECT_EQ(move.get_piece_ref(), PieceRef(player, piece_rank)); \
+	EXPECT_EQ(move.get_avoid_finish(), avoid_finish); \
 } while(0)
 
-#define MOVE_TEST(player, notation, card, count, piece_rank, avoid_finish, is_joker) \
-	_MOVE_TEST(CONCAT(a_opt, __COUNTER__), CONCAT(move, __COUNTER__), player, notation, card, count, piece_rank, avoid_finish, is_joker)\
-
-#define _SWAP_TEST(var1, var2, player, notation, rank, player_other, rank_other, is_joker) do { \
-	optional<ActionVar> var1; \
-	NOTATION_TEST(var1, player, notation, Jack, Swap, is_joker); \
+#define SWAP_TEST(player, notation, rank, player_other, rank_other, is_joker) do { \
+	optional<ActionVar> a_opt; \
+	NOTATION_TEST(a_opt, player, notation, Jack, Swap, is_joker); \
 \
-	Swap var2 = std::get<Swap>(var1.value()); \
-	EXPECT_EQ(var2.get_piece_1(), PieceRef(player, rank)); \
-	EXPECT_EQ(var2.get_piece_2(), PieceRef(player_other, rank_other)); \
+	Swap swap = std::get<Swap>(a_opt.value()); \
+	EXPECT_EQ(swap.get_piece_1(), PieceRef(player, rank)); \
+	EXPECT_EQ(swap.get_piece_2(), PieceRef(player_other, rank_other)); \
 } while(0)
-
-#define SWAP_TEST(player, notation, rank, player_other, rank_other, is_joker) \
-	_SWAP_TEST(CONCAT(a_opt, __COUNTER__), CONCAT(swap, __COUNTER__), player, notation, rank, player_other, rank_other, is_joker)\
 
 
 TEST(NotationParsing, StartCard) {

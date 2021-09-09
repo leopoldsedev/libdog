@@ -22,7 +22,7 @@
 	DogGame game(false, false, false); \
 	game.load_board(notation_start); \
 	EXPECT_TRUE(game.play_notation(player_id, notation_move)); \
-	EXPECT_TRUE(check_state(game)); \
+	EXPECT_TRUE(game.board_state.check_state()); \
 	EXPECT_EQ(to_notation(game.board_state), notation_end); \
 } while(0)
 
@@ -30,7 +30,7 @@
 	DogGame game(false, false, false); \
 	game.load_board(notation_start); \
 	EXPECT_FALSE(game.play_notation(player_id, notation_move)); \
-	EXPECT_TRUE(check_state(game)); \
+	EXPECT_TRUE(game.board_state.check_state()); \
 	EXPECT_EQ(to_notation(game.board_state), notation_start); \
 } while(0)
 
@@ -60,79 +60,10 @@
 } while(0)
 
 
-bool check_state(DogGame& game) {
-	std::array<int, PLAYER_COUNT> piece_cnt;
-	piece_cnt.fill(0);
-
-	for (int player = 0; player != PLAYER_COUNT; player++) {
-		bool expect_pieces_only = false;
-
-		for (std::size_t j = 0; j != game.board_state.kennels.size(); j++) {
-			PiecePtr& piece = game.board_state.kennels.at(player).at(j);
-
-			if (piece != nullptr) {
-				if (piece->player != player) {
-					return false;
-				}
-
-				if (piece->position != BoardPosition(Kennel, player, j)) {
-					return false;
-				}
-
-				piece_cnt.at(piece->player)++;
-
-				expect_pieces_only = true;
-			} else {
-				if (expect_pieces_only) {
-					return false;
-				}
-			}
-		}
-	}
-
-	for (std::size_t i = 0; i != game.board_state.path.size(); i++) {
-		PiecePtr& piece = game.board_state.path.at(i);
-
-		if (piece != nullptr) {
-			if (piece->position != BoardPosition(i)) {
-				return false;
-			}
-
-			piece_cnt.at(piece->player)++;
-		}
-	}
-
-	for (int player = 0; player != PLAYER_COUNT; player++) {
-		for (std::size_t j = 0; j != game.board_state.finishes.size(); j++) {
-			PiecePtr& piece = game.board_state.finishes.at(player).at(j);
-
-			if (piece != nullptr) {
-				if (piece->player != player) {
-					return false;
-				}
-
-				if (piece->position != BoardPosition(Finish, player, j)) {
-					return false;
-				}
-
-				piece_cnt.at(piece->player)++;
-			}
-		}
-	}
-
-	for (int count : piece_cnt) {
-		if (count != PIECE_COUNT) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
 TEST(BasicTest, Reset) {
 	DogGame game;
 
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 
 	for (std::size_t player = 0; player != game.board_state.kennels.size(); player++) {
 		for (std::size_t j = 0; j != game.board_state.kennels.size(); j++) {
@@ -161,22 +92,22 @@ TEST(BasicTest, Start) {
 	DogGame game(false, false, false);
 
 	game.board_state.start_piece(0, true);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_PLAYER_AT(0, 0);
 	EXPECT_EQ(game.board_state.path.at(0)->blocking, true);
 
 	game.board_state.start_piece(1, true);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_PLAYER_AT(16, 1);
 	EXPECT_EQ(game.board_state.path.at(16)->blocking, true);
 
 	game.board_state.start_piece(2, true);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_PLAYER_AT(32, 2);
 	EXPECT_EQ(game.board_state.path.at(32)->blocking, true);
 
 	game.board_state.start_piece(3, true);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_PLAYER_AT(48, 3);
 	EXPECT_EQ(game.board_state.path.at(48)->blocking, true);
 }
@@ -193,7 +124,7 @@ TEST(BasicTest, MovePiece) {
 
 		EXPECT_TRUE(legal);
 
-		EXPECT_TRUE(check_state(game));
+		EXPECT_TRUE(game.board_state.check_state());
 	}
 
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
@@ -208,22 +139,22 @@ TEST(BasicTest, Blockades) {
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(0)), PATH_SECTION_LENGTH, true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(PATH_SECTION_LENGTH)), -PATH_SECTION_LENGTH, true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(0)), -PATH_SECTION_LENGTH, true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(PATH_LENGTH - PATH_SECTION_LENGTH)), PATH_SECTION_LENGTH, true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
 	game.board_state.start_piece(1, true);
@@ -232,42 +163,42 @@ TEST(BasicTest, Blockades) {
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(0)), PATH_SECTION_LENGTH, true, true, false);
 	EXPECT_FALSE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(0)), -PATH_SECTION_LENGTH, true, true, false);
 	EXPECT_FALSE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(0)), PATH_SECTION_LENGTH - 1, true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(PATH_SECTION_LENGTH - 1)), 1, true, true, false);
 	EXPECT_FALSE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(PATH_SECTION_LENGTH), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(PATH_SECTION_LENGTH - 1)), -(PATH_SECTION_LENGTH - 1), true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(0)), -(PATH_SECTION_LENGTH - 1), true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1))), -1, true, true, false);
 	EXPECT_FALSE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(PATH_LENGTH - PATH_SECTION_LENGTH), nullptr);
 
 	legal = game.board_state.move_piece(game.board_state.get_piece(BoardPosition(PATH_LENGTH - (PATH_SECTION_LENGTH - 1))), PATH_SECTION_LENGTH - 1, true, true, false);
 	EXPECT_TRUE(legal);
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_NE(game.board_state.path.at(0), nullptr);
 }
 
@@ -558,7 +489,7 @@ TEST(CardTest, PlayForTeamMate) {
 	game.load_board(notation_str);
 	ActionVar action = from_notation(2, "X72'12'12'12'12'12'12'1");
 	EXPECT_FALSE(game.play(0, action));
-	EXPECT_TRUE(check_state(game));
+	EXPECT_TRUE(game.board_state.check_state());
 	EXPECT_EQ(to_notation(game.board_state), notation_str);
 
 	// TODO Add checks for possible actions

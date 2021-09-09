@@ -20,6 +20,7 @@ typedef std::unique_ptr<Piece> PiecePtr;
 
 class BoardState {
 	public:
+
 		// TODO Think about a way to properly abstract away the fact that after the last path index the first path index begins again
 		std::array<PiecePtr, PATH_LENGTH> path;
 		std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
@@ -58,7 +59,6 @@ class BoardState {
 
 		BoardState& operator=(const BoardState& other)
 		{
-			// TODO This implementation is probably not correct
 			if (this != &other)
 			{
 				for (std::size_t player = 0; player != kennels.size(); player++) {
@@ -646,41 +646,6 @@ class BoardState {
 			return true;
 		}
 
-		// TODO This method should be private
-		bool move_multiple_pieces_naive(std::vector<MoveSpecifier> move_actions) {
-			bool legal = true;
-
-			// All piece references are resolved in the starting position
-			// Note that it is not sufficient to resolve them to PiecePtr&
-			// because a PiecePtr essentially is a reference to a slot. If a
-			// move specifier causes another piece to be sent back to kernel,
-			// the PiecePtr of that piece would change to be nullptr.
-			// Consequently, pointers to the actual pieces are required. These
-			// pointers stay valid even if the pieces they point to are moved.
-			std::vector<Piece*> piece_ptrs;
-			for (MoveSpecifier move_specifier : move_actions) {
-				PiecePtr& piece = ref_to_piece(move_specifier.piece_ref);
-				piece_ptrs.push_back(piece.get());
-			}
-
-			for (std::size_t i = 0; i < move_actions.size(); i++) {
-				MoveSpecifier move_action = move_actions.at(i);
-
-				Piece* piece_ptr = piece_ptrs.at(i);
-				PiecePtr& piece = get_piece(piece_ptr->position);
-				int count = move_action.count;
-				bool avoid_finish = move_action.avoid_finish;
-
-				legal = move_piece(piece, count, avoid_finish, true, true);
-
-				if (!legal) {
-					break;
-				}
-			}
-
-			return legal;
-		}
-
 		bool move_multiple_pieces(std::vector<MoveSpecifier> move_actions, bool modify_state) {
 			// Try out the moves on a copy of the board state
 			BoardState copy = BoardState(*this);
@@ -714,6 +679,114 @@ class BoardState {
 			}
 
 			return true;
+		}
+
+		bool check_state() {
+			std::array<int, PLAYER_COUNT> piece_cnt;
+			piece_cnt.fill(0);
+
+			for (int player = 0; player != PLAYER_COUNT; player++) {
+				bool expect_pieces_only = false;
+
+				for (std::size_t j = 0; j != kennels.size(); j++) {
+					PiecePtr& piece = kennels.at(player).at(j);
+
+					if (piece != nullptr) {
+						if (piece->player != player) {
+							return false;
+						}
+
+						if (piece->position != BoardPosition(Kennel, player, j)) {
+							return false;
+						}
+
+						piece_cnt.at(piece->player)++;
+
+						expect_pieces_only = true;
+					} else {
+						if (expect_pieces_only) {
+							return false;
+						}
+					}
+				}
+			}
+
+			for (std::size_t i = 0; i != path.size(); i++) {
+				PiecePtr& piece = path.at(i);
+
+				if (piece != nullptr) {
+					if (piece->position != BoardPosition(i)) {
+						return false;
+					}
+
+					piece_cnt.at(piece->player)++;
+				}
+			}
+
+			for (int player = 0; player != PLAYER_COUNT; player++) {
+				for (std::size_t j = 0; j != finishes.size(); j++) {
+					PiecePtr& piece = finishes.at(player).at(j);
+
+					if (piece != nullptr) {
+						if (piece->player != player) {
+							return false;
+						}
+
+						if (piece->position != BoardPosition(Finish, player, j)) {
+							return false;
+						}
+
+						piece_cnt.at(piece->player)++;
+					}
+				}
+			}
+
+			for (int count : piece_cnt) {
+				if (count != PIECE_COUNT) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		friend std::ostream& operator<<(std::ostream& os, BoardState const& obj) {
+			  return os << obj.to_str();
+		}
+
+	private:
+		bool move_multiple_pieces_naive(std::vector<MoveSpecifier> move_actions) {
+			bool legal = true;
+
+			// All piece references are resolved in the starting position
+			// Note that it is not sufficient to resolve them to PiecePtr&
+			// because a PiecePtr essentially is a reference to a slot. If a
+			// move specifier causes another piece to be sent back to kernel,
+			// the PiecePtr of that piece would change to be nullptr.
+			// Consequently, pointers to the actual pieces are required. These
+			// pointers stay valid even if the pieces they point to are moved.
+			std::vector<Piece*> piece_ptrs;
+			for (MoveSpecifier move_specifier : move_actions) {
+				PiecePtr& piece = ref_to_piece(move_specifier.piece_ref);
+				piece_ptrs.push_back(piece.get());
+			}
+
+			for (std::size_t i = 0; i < move_actions.size(); i++) {
+				MoveSpecifier move_action = move_actions.at(i);
+
+				Piece* piece_ptr = piece_ptrs.at(i);
+				PiecePtr& piece = get_piece(piece_ptr->position);
+				int count = move_action.count;
+				bool avoid_finish = move_action.avoid_finish;
+
+				legal = move_piece(piece, count, avoid_finish, true, true);
+
+				if (!legal) {
+					break;
+				}
+			}
+
+			return legal;
 		}
 
 		// 0 = nothing, 1 = path, 2 = finish, 3 = kennel, 4 = char, 5 = block indicator
@@ -767,10 +840,6 @@ class BoardState {
 				{ '1', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 29, 0, 30, 0, 31, 0, 32, 2, 0, 0, 0, 20, 0, 21, 0, 22, 0, 23, 0, 0, 0, 0, '2' },
 			}
 		};
-
-		friend std::ostream& operator<<(std::ostream& os, BoardState const& obj) {
-			  return os << obj.to_str();
-		}
 
 		std::string to_str() const {
 			std::stringstream ss;

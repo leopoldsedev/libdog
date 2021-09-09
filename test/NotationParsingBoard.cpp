@@ -14,6 +14,7 @@
 	optional<BoardState> board_opt = try_parse_notation(notation); \
 	EXPECT_TRUE(board_opt.has_value()); \
 	var1 = board_opt.value(); \
+	EXPECT_TRUE(var1.check_state()); \
 	EXPECT_EQ(notation, to_notation(board_opt.value())); \
 } while(0)
 
@@ -23,8 +24,6 @@
 	EXPECT_EQ(board.get_piece(position)->blocking, is_blocking); \
 } while(0)
 
-
-// TODO Add check_state() function for every test case from Game tests
 
 TEST(NotationParsingBoard, Empty) {
 	BoardState board;

@@ -295,9 +295,7 @@ ActionVar from_notation(int player, string notation_str) {
 // TODO Extend notation so that ommitting the digit for forward moving cards implies piece rank of 0
 // TODO Extend notation so that "X#" becomes valid
 optional<ActionVar> try_parse_notation(int player, string notation_str) {
-	// Remove all whitespace from string
-	// Source: https://stackoverflow.com/a/83538/3118787
-	notation_str.erase(remove_if(notation_str.begin(), notation_str.end(), ::isspace), notation_str.end());
+	erase_whitespace(notation_str);
 
 	string first_char = notation_str.substr(0, 1);
 	notation_str.erase(0, 1);
@@ -449,10 +447,7 @@ BoardState from_notation(string notation_str) {
 }
 
 optional<BoardState> try_parse_notation(string notation_str) {
-	// TODO remove code duplication
-	// Remove all whitespace from string
-	// Source: https://stackoverflow.com/a/83538/3118787
-	notation_str.erase(remove_if(notation_str.begin(), notation_str.end(), ::isspace), notation_str.end());
+	erase_whitespace(notation_str);
 
 	regex regex_outer(R"((^|\|?([FP]\d{1,2}\*?)*)*)");
 	regex regex_inner_1(R"((^|\|)(([FP]\d{1,2}\*?)*))");

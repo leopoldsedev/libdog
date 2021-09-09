@@ -527,7 +527,6 @@ class DogGame {
 
 		// TODO Make more efficient
 		// TODO Currently avoid_finish flag is always set to false, generate also the moves that have this flag set to true
-		// TODO Somehow add tests for this function
 		// TODO Consolidate consecutive moves of the same piece
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker) {
 			std::vector<ActionVar> result;

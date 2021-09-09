@@ -223,7 +223,7 @@ class MoveMultiple : public Action {
 		MoveMultiple(Card card, std::vector<MoveSpecifier> move_specifiers) : MoveMultiple(card, move_specifiers, false) {
 		}
 
-		// TODO Check that the same piece is not references more than once in the move list
+		// TODO Check that the same piece is not referenced more than once in the move list (maybe not do this because the possible actions algorithm depends on that being allowed
 		virtual bool is_valid() const {
 			if (card != Seven) {
 				return false;
