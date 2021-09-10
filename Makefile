@@ -1,13 +1,13 @@
+.PHONY: build
+build: all
+
 .PHONY: run
 run: all
-	build/libdog
+	build/demo/libdog_demo
 
 .PHONY: runvalgrind
 runvalgrind: all
-	valgrind --track-fds=yes --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=valgrind-out.txt build/libdog
-
-.PHONY: build
-build: all
+	valgrind --track-fds=yes --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose --log-file=valgrind-out.txt build/demo/libdog_demo
 
 .PHONY: all
 all: debug

@@ -4,14 +4,15 @@
 #include <vector>
 #include <cassert>
 
-#include "DogGame.hpp"
-#include "Notation.hpp"
-#include "Debug.hpp"
+#include <libdog/libdog.hpp>
 
 #define sleep(x) (std::this_thread::sleep_for(std::chrono::milliseconds(x)))
 
 
 using namespace std;
+using libdog::DogGame;
+using libdog::to_notation;
+using libdog::ActionVar;
 
 int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *argv[])
 {

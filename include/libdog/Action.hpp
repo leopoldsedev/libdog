@@ -3,10 +3,11 @@
 #include <variant>
 #include <vector>
 
-#include "Card.hpp"
-#include "PieceRef.hpp"
-#include "Debug.hpp"
+#include <libdog/Card.hpp>
+#include <libdog/PieceRef.hpp>
 
+
+namespace libdog {
 
 const std::map <int, Card> count_to_card {
 	{ -4, Four },
@@ -399,3 +400,5 @@ inline void action_set_joker(ActionVar& action, bool joker) {
 		assert(false);
 	}
 }
+
+};

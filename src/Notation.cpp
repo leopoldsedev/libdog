@@ -1,12 +1,16 @@
+#include <libdog/Notation.hpp>
+
 #include <regex>
 
-#include "Notation.hpp"
+#include "Util.hpp"
 #include "Debug.hpp"
+
 
 using std::optional, std::nullopt;
 using std::regex, std::smatch, std::sregex_iterator;
 using std::stoi;
 
+namespace libdog {
 
 optional<ActionVar> notation_parse_give(string notation_arg_str) {
 	regex regex(R"([A23456789TJQKX])");
@@ -572,4 +576,6 @@ std::string to_notation(const BoardState board) {
 	}
 
 	return ss.str();
+}
+
 }

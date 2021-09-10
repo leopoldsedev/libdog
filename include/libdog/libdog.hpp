@@ -1,0 +1,12 @@
+#include <libdog/Action.hpp>
+#include <libdog/Area.hpp>
+#include <libdog/BoardPosition.hpp>
+#include <libdog/BoardState.hpp>
+#include <libdog/Card.hpp>
+#include <libdog/CardsState.hpp>
+#include <libdog/CardStack.hpp>
+#include <libdog/Constants.hpp>
+#include <libdog/DogGame.hpp>
+#include <libdog/Notation.hpp>
+#include <libdog/Piece.hpp>
+#include <libdog/PieceRef.hpp>

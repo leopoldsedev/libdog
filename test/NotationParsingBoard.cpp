@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "Notation.hpp"
-#include "Debug.hpp"
+#include <libdog/Notation.hpp>
 
+
+using namespace libdog;
 
 #define NOTATION_INVALID(notation) do { \
 	optional<BoardState> var1 = try_parse_notation(notation); \

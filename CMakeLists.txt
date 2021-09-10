@@ -14,17 +14,18 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG")
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
-add_link_options("-std=c++2a")
+
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
 set(SRC_EXT_PATTERN ".cpp")
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*${SRC_EXT_PATTERN})
-file(GLOB DEMO_FILES ${PROJECT_SOURCE_DIR}/demo/*${SRC_EXT_PATTERN})
 
-include_directories(src)
+include_directories(include)
 
-add_executable(${PROJECT_NAME} ${SRC_FILES} ${DEMO_FILES})
+add_library(${PROJECT_NAME} ${SRC_FILES})
+
+add_subdirectory(demo)
 
 
 enable_testing()
@@ -35,7 +36,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*${SRC_EXT_PATTERN})
 add_executable(${TEST_NAME} ${TEST_SRC_FILES})
 
-target_link_libraries(${TEST_NAME} ${GTEST_BOTH_LIBRARIES} ${SRC_FILES})
+target_link_libraries(${TEST_NAME} ${GTEST_BOTH_LIBRARIES} ${PROJECT_NAME})
 
 include(GoogleTest)
 gtest_discover_tests(${TEST_NAME})

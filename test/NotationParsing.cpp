@@ -2,10 +2,11 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "Notation.hpp"
-#include "Action.hpp"
-#include "Debug.hpp"
+#include <libdog/Notation.hpp>
+#include <libdog/Action.hpp>
 
+
+using namespace libdog;
 
 #define IS_ACTION(x, t) (std::holds_alternative<t>(x))
 

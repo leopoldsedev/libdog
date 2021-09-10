@@ -3,8 +3,11 @@
 #include "Action.hpp"
 #include "BoardState.hpp"
 
+
 using std::optional;
 using std::string;
+
+namespace libdog {
 
 class BoardState;
 
@@ -16,6 +19,8 @@ optional<ActionVar> try_parse_notation(int player, string notation_str);
 
 optional<BoardState> try_parse_notation(string notation_str);
 
-std::string to_notation(int player, ActionVar action);
+string to_notation(int player, ActionVar action);
 
-std::string to_notation(const BoardState board);
+string to_notation(const BoardState board);
+
+};

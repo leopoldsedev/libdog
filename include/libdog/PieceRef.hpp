@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Piece.hpp"
-#include "Constants.hpp"
+#include <libdog/Piece.hpp>
+#include <libdog/Constants.hpp>
 
+
+namespace libdog {
 
 class PieceRef {
 	public:
@@ -39,3 +41,5 @@ class PieceRef {
 			return ss.str();
 		}
 };
+
+}

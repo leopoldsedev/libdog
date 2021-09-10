@@ -1,12 +1,10 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include "BoardState.hpp"
-#include "DogGame.hpp"
-#include "CardsState.hpp"
-#include "Debug.hpp"
-#include "Notation.hpp"
-#include "PieceRef.hpp"
+#include <libdog/libdog.hpp>
+
+
+using namespace libdog;
 
 
 #define EXPECT_PLAYER_AT(path_idx, player_id) do { \

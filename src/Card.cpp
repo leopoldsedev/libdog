@@ -1,5 +1,7 @@
-#include "Card.hpp"
+#include <libdog/Card.hpp>
 
+
+namespace libdog {
 
 std::array<std::string, 15> card_to_str = { "-", "A", "2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "X" };
 
@@ -51,4 +53,6 @@ std::vector<Card> cards_from_str(std::string card_str) {
 	}
 
 	return cards;
+}
+
 }

@@ -1,5 +1,7 @@
-#include "Area.hpp"
+#include <libdog/Area.hpp>
 
+
+namespace libdog {
 
 std::string get_area_name(Area area) {
 	switch (area) {
@@ -16,4 +18,6 @@ std::string get_area_name(Area area) {
 			assert(false);
 			break;
 	}
+}
+
 }

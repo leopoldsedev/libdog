@@ -1,8 +1,10 @@
 #pragma once
 
-#include "Area.hpp"
-#include "BoardPosition.hpp"
+#include <libdog/Area.hpp>
+#include <libdog/BoardPosition.hpp>
 
+
+namespace libdog {
 
 class Piece {
 	public:
@@ -21,4 +23,6 @@ class Piece {
 		}
 
 		friend bool operator==(const Piece& a, const Piece& b) = default;
+};
+
 };
