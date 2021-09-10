@@ -22,21 +22,28 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *a
 	game.play_notation(2, "GA");
 	game.play_notation(3, "G7");
 
-	// Play card for player 0
+	// Play an Ace for player 0 to move a piece out of the kennel
 	game.play_notation(0, "A#");
 
 	// Print resulting game state
 	std::cout << game << std::endl;
 
-	// Get all possible legal actions of the player that has the next turn (player 1)
-	std::vector<ActionVar> actions = game.get_possible_actions(game.player_turn);
+	// Get player that has the next turn (player 1)
+	int player = game.player_turn;
+
+	// Get all possible legal actions from the current position
+	std::vector<ActionVar> actions = game.get_possible_actions(player);
 
 	// Print the first action in the list in game notation
-	std::cout << to_notation(game.player_turn, actions.at(0)) << std::endl;
+	std::cout << to_notation(player, actions.at(0)) << std::endl;
 
 	// Play the first action in the list in game notation
-	game.play(game.player_turn, actions.at(0));
+	game.play(player, actions.at(0));
 
 	// Print resulting game state
+	std::cout << game << std::endl;
+
+	// Load a board state and print it
+	game.load_board("P0*F1|P14P16|F0F3|P36P48*");
 	std::cout << game << std::endl;
 }
