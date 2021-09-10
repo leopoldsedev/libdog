@@ -1,6 +1,6 @@
 # What is this game?
 
-Dog is a swiss board game similar to the Canadian [Tock](https://en.wikipedia.org/wiki/Tock).
+Dog is a Swiss board game similar to the Canadian [Tock](https://en.wikipedia.org/wiki/Tock).
 
 ## Rules
 
