@@ -14,8 +14,7 @@ using libdog::DogGame;
 using libdog::to_notation;
 using libdog::ActionVar;
 
-int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *argv[])
-{
+int main(__attribute__((unused)) int argc, __attribute__((unused)) const char *argv[]) {
 	DogGame game(true);
 
 	int moves = 0;

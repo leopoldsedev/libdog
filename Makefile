@@ -2,8 +2,15 @@
 build: all
 
 .PHONY: run
-run: all
-	build/demo/libdog_demo
+run: run_demo_random
+
+.PHONY: run_demo_random
+run_demo_random: all
+	build/demo/libdog_random_demo
+
+.PHONY: run_demo_usage
+run_demo_usage: all
+	build/demo/libdog_usage_demo
 
 .PHONY: runvalgrind
 runvalgrind: all
