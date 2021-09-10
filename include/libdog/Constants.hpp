@@ -1,6 +1,8 @@
 #pragma once
 
 
+// Note that changing these constants will likely break the implementation
+
 #define PLAYER_COUNT (4)
 #define PIECE_COUNT (4)
 #define PATH_LENGTH (64)
@@ -10,6 +12,8 @@
 
 #define DECK_COUNT (2)
 #define JOKER_COUNT (3 * DECK_COUNT)
+#define STARTING_HANDOUT_SIZE (6)
+#define MIN_HANDOUT_SIZE (2)
 
 #define GET_TEAM_PLAYER_IDX(player_idx) (((player_idx) + 2) % PLAYER_COUNT)
 

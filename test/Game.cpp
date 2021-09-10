@@ -18,7 +18,7 @@ using namespace libdog;
 } while(0)
 
 #define TEST_MOVE_FROM_TO(notation_start, player_id, notation_move, notation_end) do { \
-	DogGame game(false, false, false); \
+	DogGame game(true, false, false, false); \
 	game.load_board(notation_start); \
 	EXPECT_TRUE(game.play_notation(player_id, notation_move)); \
 	EXPECT_TRUE(game.board_state.check_state()); \
@@ -26,7 +26,7 @@ using namespace libdog;
 } while(0)
 
 #define TEST_INVALID_MOVE_FROM(notation_start, player_id, notation_move) do { \
-	DogGame game(false, false, false); \
+	DogGame game(true, false, false, false); \
 	game.load_board(notation_start); \
 	EXPECT_FALSE(game.play_notation(player_id, notation_move)); \
 	EXPECT_TRUE(game.board_state.check_state()); \
@@ -60,7 +60,7 @@ using namespace libdog;
 
 
 TEST(BasicTest, Reset) {
-	DogGame game;
+	DogGame game(true);
 
 	EXPECT_TRUE(game.board_state.check_state());
 
@@ -88,7 +88,7 @@ TEST(BasicTest, Reset) {
 }
 
 TEST(BasicTest, Start) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	game.board_state.start_piece(0, true);
 	EXPECT_TRUE(game.board_state.check_state());
@@ -112,7 +112,7 @@ TEST(BasicTest, Start) {
 }
 
 TEST(BasicTest, MovePiece) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	game.board_state.start_piece(0, true);
 
@@ -130,7 +130,7 @@ TEST(BasicTest, MovePiece) {
 }
 
 TEST(BasicTest, Blockades) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	game.board_state.start_piece(0, true);
 
@@ -202,7 +202,7 @@ TEST(BasicTest, Blockades) {
 }
 
 TEST(BasicTest, PieceRefResolution) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	// TODO Also check negative construction cases (for that the assertion in PieceRef will probably need to be replaced with an exception)
 	for (int player = 0; player < PLAYER_COUNT; player++) {
@@ -234,7 +234,7 @@ TEST(BasicTest, PieceRefResolution) {
 }
 
 TEST(PrimitiveTest, Authorization) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	game.load_board("P0*|P17|P33|P49");
 
 	EXPECT_TRUE(game.play(1, Start(Ace, false), false));
@@ -246,6 +246,11 @@ TEST(PrimitiveTest, Authorization) {
 	EXPECT_FALSE(game.play(0, Move(Ace, PieceRef(1, 0), 1, false), false));
 	EXPECT_FALSE(game.play(0, Move(Ace, PieceRef(0, 0), 2, false), false));
 	EXPECT_FALSE(game.play(0, Move(Ace, PieceRef(0, 0), 2, true), false));
+
+	EXPECT_TRUE(game.play(0, MoveMultiple(Seven, {
+		MoveSpecifier(PieceRef(0, 0), 4, false),
+		MoveSpecifier(PieceRef(0, 0), 3, false),
+	}, false), false));
 
 	EXPECT_TRUE(game.play(0, MoveMultiple(Seven, {
 		MoveSpecifier(PieceRef(2, 0), 4, false),
@@ -301,7 +306,7 @@ TEST(CardTest, Start) {
 }
 
 TEST(CardTest, StartInvalid) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	TEST_MOVE_FROM_TO("P1P2P3|||", 0, "A#", "P0*P1P2P3|||");
 
@@ -410,7 +415,7 @@ TEST(CardTest, IntoFinishFlag) {
 	   true          blocked  blocked   illegal
 	*/
 
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	int player = 0;
 
@@ -431,7 +436,7 @@ TEST(CardTest, IntoFinishFlag) {
 }
 
 TEST(CardTest, MoveInFinish) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	int player = 3;
 
@@ -483,7 +488,7 @@ TEST(CardTest, PlayForTeamMate) {
 
 	TEST_INVALID_MOVE_FROM("F0F1F2F3|P30F1F2F3|P26P32*P39F3|P62F3", 0, "X72'12'12'12'12'12'12'1");
 
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	std::string notation_str = "F0F1F2F3|P30F1F2F3|P26P32*P39F3|P62F3";
 	game.load_board(notation_str);
 	ActionVar action = from_notation(2, "X72'12'12'12'12'12'12'1");
@@ -495,7 +500,7 @@ TEST(CardTest, PlayForTeamMate) {
 }
 
 TEST(PossibleAction, Move) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	std::vector<ActionVar> actions;
 
 	game.load_board("P60|P17|P34|P50");
@@ -516,7 +521,7 @@ TEST(PossibleAction, Move) {
 }
 
 TEST(PossibleAction, MoveInFinish) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	std::vector<ActionVar> actions;
 
 	int player = 3;
@@ -571,7 +576,7 @@ TEST(PossibleAction, AvoidFinish) {
 }
 
 TEST(PossibleAction, Swap) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	std::vector<ActionVar> actions;
 
 	actions = game.possible_actions_for_card(0, Jack, false);
@@ -675,7 +680,7 @@ TEST(PossibleAction, Swap) {
 }
 
 TEST(PossibleAction, SevenSimple) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	std::vector<ActionVar> actions;
 
 	// 0    0 0 0 0    . . . . .               3
@@ -700,6 +705,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ .
 	// 1               . . . . .    2 2 2 2    2
 	game.load_board("|||");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {});
 
@@ -725,6 +731,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ .
 	// 1               . . . . .    2 2 2 2    2
 	game.load_board("P17|||");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
 		from_notation("P24|||") COMMA
@@ -752,6 +759,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ .
 	// 1               . . . . .    2 2 2 2    2
 	game.load_board("P1P17|||");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
 		from_notation("P1P24|||") COMMA
@@ -786,6 +794,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ 2
 	// 1               . . . . .    . 2 2 2    2
 	game.load_board("P1P17||P33|");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
 		from_notation("P1P24||P33|") COMMA
@@ -855,6 +864,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ .
 	// 1               . . . . .    . . . .    2
 	game.load_board("F0F1F2F3|P18F1F2F3|P37F1F2F3|P48P60F2F3");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
 		from_notation("F0F1F2F3|P18F1F2F3|P44F1F2F3|P48P60F2F3") COMMA
@@ -883,6 +893,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ .
 	// 1               . . . . .    . . . .    2
 	game.load_board("P62F1F2F3|P18F1F2F3|P37F1F2F3|P48P60F2F3");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
 		from_notation("P62F1F2F3|P18F1F2F3|P44F1F2F3|P48P60F2F3") COMMA
@@ -922,6 +933,7 @@ TEST(PossibleAction, SevenSimple) {
 	//                 .     \ .
 	// 1               . . . 2 .    . . . .    2
 	game.load_board("P62F1F2F3|P18F1F2F3|P31F1F2F3|P48P60F2F3");
+
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
 		from_notation("P62F1F2F3|P18F1F2F3|P38F1F2F3|P48P60F2F3") COMMA
@@ -940,7 +952,7 @@ TEST(PossibleAction, SevenSimple) {
 }
 
 TEST(PossibleAction, SevenBlockades) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 	std::vector<ActionVar> actions;
 
 	// 0    0 0 . .    . . . . .               3
@@ -965,8 +977,9 @@ TEST(PossibleAction, SevenBlockades) {
 	//                 .     \ .
 	// 1               . . . . .    . 2 2 2    2
 	game.load_board("P12F3|P15P16*|P14|P46P58");
+
 	actions = game.possible_actions_for_card(2, Seven, false);
-	EXPECT_EQ(actions.size(), 0);
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {});
 
 	// 0    0 0 . .    . . . . .               3
 	//      3 2 1 0    . \     .
@@ -990,8 +1003,9 @@ TEST(PossibleAction, SevenBlockades) {
 	//                 .     \ .
 	// 1               . . . . .    2 2 2 2    2
 	game.load_board("P12P46|P16*P43F2F3||P15P56F3");
+
 	actions = game.possible_actions_for_card(2, Seven, false);
-	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {
 		from_notation("P12P53|P16*P43F2F3||P15P56F3") COMMA
 		from_notation("P13P52|P16*P43F2F3||P15P56F3") COMMA
 		from_notation("P14P51|P16*P43F2F3||P15P56F3") COMMA
@@ -1020,17 +1034,41 @@ TEST(PossibleAction, SevenBlockades) {
 	//                 .     \ .
 	// 1               . . . . .    2 2 2 2    2
 	game.load_board("P12P46F3|P16*P43F2F3||P15P56F3");
+
 	actions = game.possible_actions_for_card(2, Seven, false);
-	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {
 		from_notation("P12P53F3|P16*P43F2F3||P15P56F3") COMMA
 		from_notation("P13P52F3|P16*P43F2F3||P15P56F3") COMMA
 		from_notation("P14P51F3|P16*P43F2F3||P15P56F3") COMMA
 		from_notation("P15P50F3|P16*P43F2F3||P56F3") COMMA
 	});
 
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  0 2  3               .
+	//               .    . 3    .             .
+	//             .               .           .
+	//           .                   .
+	// . . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
 	game.load_board("P46F2|P16*P43F2F3||P15P56F3");
+
 	actions = game.possible_actions_for_card(2, Seven, false);
-	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {
 		from_notation("P53F2|P16*P43F2F3||P15P56F3") COMMA
 		from_notation("P52F3|P16*P43F2F3||P15P56F3") COMMA
 	});
@@ -1059,7 +1097,7 @@ TEST(PossibleAction, SevenBlockades) {
 	game.load_board("P12P46F1F3|P16*P43F2F3||P15P56F3");
 
 	actions = game.possible_actions_for_card(2, Seven, false);
-	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {
 		from_notation("P12P53F1F3|P16*P43F2F3||P15P56F3") COMMA
 
 		from_notation("P12P52F2F3|P16*P43F2F3||P15P56F3") COMMA
@@ -1098,7 +1136,7 @@ TEST(PossibleAction, SevenBlockades) {
 	game.load_board("P12|P16*||");
 
 	actions = game.possible_actions_for_card(0, Seven, false);
-	EXPECT_EQ(actions.size(), 0);
+	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {});
 
 	// 0    0 0 0 .    . . . . .               3
 	//      3 2 1 0    . \     .
@@ -1167,7 +1205,7 @@ TEST(PossibleAction, SevenBlockades) {
 }
 
 TEST(PossibleAction, FullGame) {
-	DogGame game(true, true, true);
+	DogGame game(true, true, true, true);
 	std::vector<ActionVar> actions;
 
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
@@ -1505,7 +1543,7 @@ TEST(PossibleAction, FullGame) {
 }
 
 TEST(FullGameTest, WinCondition) {
-	DogGame game(false, false, false);
+	DogGame game(true, false, false, false);
 
 	EXPECT_EQ(game.result(), -1);
 
@@ -1532,7 +1570,7 @@ TEST(FullGameTest, WinCondition) {
 }
 
 TEST(FullGameTest, CardExchange) {
-	DogGame game(true, true, true);
+	DogGame game(true, true, true, true);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	// Assumed hand state:
@@ -1575,7 +1613,7 @@ TEST(FullGameTest, CardExchange) {
 	EXPECT_EQ(to_notation(game.board_state), "P0*|P16*|P32*|P48*");
 
 	// Same test repeated, but from a game state where most players are already finished
-	game = DogGame(true, true, true);
+	game = DogGame(true, true, true, true);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	// Assumed hand state:
@@ -1615,7 +1653,7 @@ TEST(FullGameTest, CardExchange) {
 
 TEST(FullGameTest, Give) {
 	// TODO Check hand states before/after
-	DogGame game(true, true, true);
+	DogGame game(true, true, true, true);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	// Assumed hand state:
@@ -1707,7 +1745,7 @@ TEST(FullGameTest, Give) {
 	EXPECT_FALSE(game.play_notation(0, "GK"));
 	EXPECT_FALSE(game.play_notation(0, "GX"));
 
-	game = DogGame(true, true, true);
+	game = DogGame(true, true, true, true);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 	game.load_board("F0F1F2F3|F0F1F2F3|F1F2F3|F1F2F3"); \
 
@@ -1734,7 +1772,7 @@ TEST(FullGameTest, Give) {
 }
 
 TEST(FullGameTest, Discard) {
-	DogGame game(false, true, false);
+	DogGame game(true, false, true, false);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	// Assumed hand state:
@@ -1880,7 +1918,7 @@ TEST(FullGameTest, Discard) {
 }
 
 TEST(FullGameTest, Turns) {
-	DogGame game(true, true, false);
+	DogGame game(true, true, true, false);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	// Assumed hand state:
@@ -1988,7 +2026,7 @@ TEST(FullGameTest, Turns) {
 }
 
 TEST(FullGameTest, HandCheck) {
-	DogGame game(false, true, false);
+	DogGame game(true, false, true, false);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	// Assumed hand state:
@@ -2091,7 +2129,7 @@ TEST(FullGameTest, HandCheck) {
 }
 
 TEST(FullGameTest, One) {
-	DogGame game(true, true, false);
+	DogGame game(true, true, true, false);
 	game.reset_with_deck("95A454968X2X924KQ8K923KA62AJ66396XT89843J34T27397T5JJT73QX34JT6KQAQ6A2T798QQJK3554AJXQ7QA84AK5572J7KXK8576TT82");
 
 	EXPECT_TRUE(game.play_notation(0, "G4"));
@@ -2312,4 +2350,267 @@ TEST(FullGameTest, One) {
 	EXPECT_TRUE(game.play_notation(1, "XA'3"));
 
 	EXPECT_EQ(game.result(), 1);
+}
+
+TEST(NoCanadianRuleOff, MoveMultiple) {
+	DogGame game(false, false, false, false);
+	game.load_board("P0*|P17|P33|P49");
+
+	EXPECT_TRUE(game.play(0, MoveMultiple(Seven, {
+		MoveSpecifier(PieceRef(0, 0), 4, false),
+		MoveSpecifier(PieceRef(0, 0), 3, false),
+	}, false), false));
+
+	EXPECT_FALSE(game.play(0, MoveMultiple(Seven, {
+		MoveSpecifier(PieceRef(2, 0), 4, false),
+		MoveSpecifier(PieceRef(0, 0), 3, false),
+	}, false), false));
+}
+
+TEST(CanadianRuleOff, PossibleAction) {
+	DogGame game(false, false, false, false);
+	std::vector<ActionVar> actions;
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    0 \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// . . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// . 0 . . .                       . . . . .
+	//           .                   .
+	// 1           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ 2
+	// 1               . . . . .    . 2 2 2    2
+	game.load_board("P1P17||P33|");
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
+		from_notation("P1P24||P33|") COMMA
+		from_notation("P2P23||P33|") COMMA
+		from_notation("P3P22||P33|") COMMA
+		from_notation("P4P21||P33|") COMMA
+		from_notation("P5P20||P33|") COMMA
+		from_notation("P6P19||P33|") COMMA
+		from_notation("P7P18||P33|") COMMA
+		from_notation("P8P17||P33|") COMMA
+	});
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  3
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    0 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// 2  . . . .                     . . . .  3
+	// 1 /                                     .
+	// 1 . . . .                       . . . . .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    . 2 2 2    2
+	game.load_board("P12F3|P15P16*|P14|P46P58");
+
+	actions = game.possible_actions_for_card(2, Seven, false);
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {});
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  3               .
+	//               .    . 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12P46|P16*P43F2F3||P15P56F3");
+
+	actions = game.possible_actions_for_card(2, Seven, false);
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {});
+
+	// 0    0 . . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  3               .
+	//               .    0 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12P46F3|P16*P43F2F3||P15P56F3");
+
+	actions = game.possible_actions_for_card(2, Seven, false);
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {});
+
+	// 0    0 0 . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  0 2  3               .
+	//               .    . 3    .             .
+	//             .               .           .
+	//           .                   .
+	// . . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P46F2|P16*P43F2F3||P15P56F3");
+
+	actions = game.possible_actions_for_card(2, Seven, false);
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {});
+
+	// 0    . . . .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  0 1  .               3
+	//                 .  . 2  3               .
+	//               .    0 3    .             .
+	//             .               .           .
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . 1 1                     3 . . .  0
+	// 3 /                                     .
+	// 1 . . . .                       . . . 1 .
+	// *         .                   .
+	// .           .               .
+	// .             .      .    .
+	// .               .    .  .
+	// .               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12P46F1F3|P16*P43F2F3||P15P56F3");
+
+	actions = game.possible_actions_for_card(2, Seven, false);
+	TEST_POSSIBLE_ACTIONS(2, game, actions, -1, {});
+
+	// 0    0 0 0 .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// 1 . . . .                       . . . . .
+	// *         .                   .
+	// .           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . .    2 2 2 2    2
+	game.load_board("P12|P16*||");
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {});
+
+	// 0    0 0 0 .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// 0 . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// 1 . . . .                       . . . . .
+	// *         .                   .
+	// .           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . . . 2*   . 2 2 2    2
+	game.load_board("P12|P16*|P32*|");
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {});
+
+	// 0    0 0 0 .    . . . . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// . . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// . . . . .                       . . . . .
+	//           .                   .
+	// 1           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               0 . . . 2*   . 2 2 2    2
+	game.load_board("P28||P32*|");
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {});
 }

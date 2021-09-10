@@ -10,7 +10,7 @@
 
 namespace libdog {
 
-DogGame::DogGame(bool check_turns, bool check_hands, bool check_give_phase) : check_turns(check_turns), check_hands(check_hands), check_give_phase(check_give_phase) {
+DogGame::DogGame(bool canadian_rule, bool check_turns, bool check_hands, bool check_give_phase) : canadian_rule(canadian_rule), check_turns(check_turns), check_hands(check_hands), check_give_phase(check_give_phase) {
 	reset();
 }
 
@@ -23,7 +23,7 @@ void DogGame::reset() {
 
 void DogGame::_reset() {
 	player_turn = 0;
-	next_hand_size = 6;
+	next_hand_size = STARTING_HANDOUT_SIZE;
 
 	cards_state.hand_out_cards(next_hand_size);
 	next_hand_size = calc_next_hand_size(next_hand_size);
@@ -70,8 +70,8 @@ int DogGame::result() {
 }
 
 int DogGame::calc_next_hand_size(int current_hand_size) {
-	if (current_hand_size == 2) {
-		return 6;
+	if (current_hand_size == MIN_HANDOUT_SIZE) {
+		return STARTING_HANDOUT_SIZE;
 	} else {
 		return next_hand_size - 1;
 	}
@@ -269,14 +269,21 @@ bool DogGame::try_play(int player, const MoveMultiple& move_multiple, bool modif
 	for (MoveSpecifier move_specifier : move_multiple.get_move_specifiers()) {
 		PiecePtr& piece = board_state.ref_to_piece(move_specifier.piece_ref);
 
-		if (piece->player != player && piece->player != GET_TEAM_PLAYER_IDX(player)) {
-			// Can only move pieces of player or team mate
-			return false;
-		}
+		if (canadian_rule) {
+			if (piece->player != player && piece->player != GET_TEAM_PLAYER_IDX(player)) {
+				// Can only move pieces of player or team mate
+				return false;
+			}
 
-		if (!RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED) {
-			if (piece->player != player && piece->blocking) {
-				// Cannot move pieces of team mate that are currently blocking
+			if (!RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED) {
+				if (piece->player != player && piece->blocking) {
+					// Cannot move pieces of team mate that are currently blocking
+					return false;
+				}
+			}
+		} else {
+			if (piece->player != player) {
+				// Can only move pieces of player
 				return false;
 			}
 		}
@@ -463,8 +470,11 @@ std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, i
 
 	APPEND(piece_refs, board_state.get_pieces_in_area(player, Path));
 	APPEND(piece_refs, board_state.get_pieces_in_area(player, Finish));
-	APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Path));
-	APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Finish));
+
+	if (canadian_rule) {
+		APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Path));
+		APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Finish));
+	}
 
 	if (piece_refs.size() == 0) {
 		return {};

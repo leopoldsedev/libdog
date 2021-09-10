@@ -25,11 +25,11 @@ class DogGame {
 		BoardState board_state;
 		CardsState cards_state;
 
-		DogGame(bool check_turns, bool check_hands, bool check_give_phase);
+		DogGame(bool canadian_rule, bool check_turns, bool check_hands, bool check_give_phase);
 
-		DogGame(bool check_turns, bool check_hands) : DogGame(check_turns, check_hands, false) {}
+		DogGame(bool canadian_rule, bool check_turns, bool check_hands) : DogGame(canadian_rule, check_turns, check_hands, false) {}
 
-		DogGame() : DogGame(true, true, true) {}
+		DogGame(bool canadian_rule) : DogGame(canadian_rule, true, true, true) {}
 
 		void reset();
 
@@ -54,6 +54,8 @@ class DogGame {
 		int switch_to_team_mate_if_done(int player);
 
 	private:
+		bool canadian_rule;
+
 		bool check_turns;
 		bool check_hands;
 		bool check_give_phase;
