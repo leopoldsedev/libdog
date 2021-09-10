@@ -4,7 +4,7 @@ Dog is a Swiss board game similar to the Canadian [Tock](https://en.wikipedia.or
 
 ## Rules
 
-The rules can be found [here](http://www.dogspiel.info/images/pdfs/regeln/rules.pdf) or [here](https://www.connexxion24.com/downloads/anleitungen-braendi-dog/Spielregeln-braendi-dog-englisch.pdf). The latter version by the Brändi foundation also includes the so-called _canadian rule_, which allows a seven to be split not only among the pieces of the player that plays it, but also among the pieces of their team mate. This library implements the Canadian rule, but it is optional.
+The rules can be found [here](http://www.dogspiel.info/images/pdfs/regeln/rules.pdf) or [here](https://www.connexxion24.com/downloads/anleitungen-braendi-dog/Spielregeln-braendi-dog-englisch.pdf). The latter version by the Brändi foundation also includes the so-called _Canadian rule_, which allows a seven to be split not only among the pieces of the player that plays it, but also among the pieces of their team mate. This library implements the Canadian rule, but it is optional.
 
 
 # What is this library for?
