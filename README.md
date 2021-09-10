@@ -9,7 +9,7 @@ The rules can be found [here](http://www.dogspiel.info/images/pdfs/regeln/rules.
 
 # What is this library for?
 
-Implementations of the game (mainly of dog, without the Canadian rule) exist, but they are either closed-source ([1](http://www.brettspielwelt.de/Hilfe/Anleitungen/Dog/), [2](https://dogapp.ch/)) or incomplete ([3](https://github.com/innerjoin/dog2go)). This library is meant to be a complete, correct implementation of the game, which can be used to implement a website for people to play on or to develop an AI in a future project.
+Implementations of the game (mainly of dog, without the Canadian rule) exist, but they are either closed-source [[1](http://www.brettspielwelt.de/Hilfe/Anleitungen/Dog/), [2](https://dogapp.ch/)] or incomplete [[3](https://github.com/innerjoin/dog2go)]. This library is meant to be a complete, correct implementation of the game, which can be used to implement a website for people to play on or to develop an AI in a future project.
 
 
 # Usage
@@ -152,13 +152,13 @@ As an example, consider the following board state.
 
 In this case, the piece on `F3` has rank 0, the piece on `P60` has rank 1, the piece `P0` has rank 2 and the piece in the kennel has rank 3. Note that if the piece on `P0` was not blocking, it could enter right away and would thus have rank 1 instead of the piece on `P60`.
 
-With this convention, a piece can be unambiguously specified by a pair of player id and rank.
+With this convention, a piece can be unambiguously specified by a pair of player ID and rank.
 
 
 ## Actions
 
 There are six types of actions in the game: `give`, `discard`, `start`, `move`, `swap`, and `move multiple`. For each type of action there is a corresponding notation format.
-Like in chess, the notation does not specify the player that plays a certain action.
+Like in the algebraic notation of chess, the notation does not include the player playing the action.
 
 
 ### Give
@@ -205,15 +205,17 @@ D[card]
 ```
 [card][piece rank]
 ```
-The piece is specified only by its rank and the player id is implicitly given by the player who is playing the action.
+The piece is specified only by its rank and the player ID is implicitly given by the player who is playing the action.
 
 **Example:** `50` means move the piece with rank 0 5 steps forward.
 
 There are cards that allow alternative actions, namely `A` (moving forward 1 step instead of 11) and `4` (moving backward 4 steps instead of forward 4).
 To activate the alternative action, an `'` is added after the card.
+
 **Example:** `4'0` means move the piece with rank 0 4 steps backward.
 
 By default, a moving piece will always enter the player's finish if possible. If the finish is blocked, it will continue on the path. However, if the finish is not blocked and the player wishes to move past the finish anyway, this is denoted by adding a `-` after the piece. The notation allows this addition even if it would have no effect (e.g. because the finish is blocked anyway, or the piece is not within range to enter the finish).
+
 **Example:** `80-` means move the piece with rank 0 8 steps forward, explicitly avoiding the finish.
 
 
@@ -225,9 +227,9 @@ By default, a moving piece will always enter the player's finish if possible. If
 
 **Notation:**
 ```
-[card][piece rank 1][player id][piece rank 2]
+[card][piece rank 1][player ID][piece rank 2]
 ```
-The first piece is specified only by its rank and the player id is implicitly given by the player who is playing the action.  The second piece is specified by a player id and rank.
+The first piece is specified only by its rank and the player ID is implicitly given by the player who is playing the action.  The second piece is specified by a player ID and rank.
 
 **Example:** `J120` means swap piece with rank 0 with the piece with rank 0 of player 2.
 
@@ -245,14 +247,16 @@ The move list has the format:
 ```
 [piece rank 1][step count 1][piece rank 2][step count 2]...
 ```
-The piece is specified only by its rank and the player id is implicitly given by the player who is playing the action. The step counts have the add up to the card value.
+The piece is specified only by its rank and the player ID is implicitly given by the player who is playing the action. The step counts have the add up to the card value.
 
 **Example:** `7022213` means to move the piece with rank 0 2 steps, the piece with rank 2 2 steps, and the piece with rank 1 3 steps (in the specified order).
 
-With the Canadian rule it is also possible to move pieces of the team mate. To specify a piece of the team mate, a `'` is added after the rank. In that case, the player id is implicitly given by the team mate of the player who is playing the action
+With the Canadian rule it is also possible to move pieces of the team mate. To specify a piece of the team mate, a `'` is added after the rank. In that case, the player ID is implicitly given by the team mate of the player who is playing the action.
+
 **Example:** `7022'213` means to move the piece with rank 0 of the player playing the action 2 steps, the piece with rank 2 of the team mate 2 steps, and the piece with rank 1 of the player playing the action 3 steps.
 
 Lastly, as for the move actions, it is possible to explicitly avoid the finish by adding a `-` after the step count.
+
 **Example:** `702-2'5-` means to move the piece with rank 0 of the player playing the action 2 steps, and the piece with rank 1 of the team mate 5 steps, explicitly avoiding the finish in both times.
 
 
