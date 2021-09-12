@@ -4,12 +4,12 @@ Dog is a Swiss board game similar to the Canadian [Tock](https://en.wikipedia.or
 
 ## Rules
 
-The rules can be found [here](http://www.dogspiel.info/images/pdfs/regeln/rules.pdf) or [here](https://www.connexxion24.com/downloads/anleitungen-braendi-dog/Spielregeln-braendi-dog-englisch.pdf). The latter version by the Brändi foundation also includes the so-called _Canadian rule_, which allows a seven to be split not only among the pieces of the player that plays it, but also among the pieces of their team mate. This library implements the Canadian rule, but it is optional.
+The rules can be found [here](http://www.dogspiel.info/images/pdfs/regeln/rules.pdf) or [here](https://www.connexxion24.com/downloads/anleitungen-braendi-dog/Spielregeln-braendi-dog-englisch.pdf). The latter version by the Brändi foundation also includes the so-called _Canadian rule_, which allows a seven to be split not only among the pieces of the player that plays it but also among the pieces of their teammate. This library implements the Canadian rule, but it is optional.
 
 
 # What is this library for?
 
-Implementations of the game (mainly of dog, without the Canadian rule) exist, but they are either closed-source [[1](http://www.brettspielwelt.de/Hilfe/Anleitungen/Dog/), [2](https://dogapp.ch/)] or incomplete [[3](https://github.com/innerjoin/dog2go)]. This library is meant to be a complete, correct implementation of the game, which can be used to implement a website for people to play on or to develop an AI in a future project.
+Implementations of the game (mainly of Dog, without the Canadian rule) exist, but they are either closed-source [[1](http://www.brettspielwelt.de/Hilfe/Anleitungen/Dog/), [2](https://dogapp.ch/)] or incomplete [[3](https://github.com/innerjoin/dog2go)]. This library is meant to be a complete, correct implementation of the game, which can be used to implement a website for people to play on or to develop an AI in a future project.
 
 
 # Usage
@@ -83,7 +83,7 @@ The notation to describe a board state has the following format.
 For each player, the positions of their pieces are denoted as a sequence of `P[index]` and `F[index]`. `P` means the piece is currently on the path on position `[index]`, and `F` means the piece is on the corresponding index in the finish. If a piece is not contained in the sequence it means it is in the kennel.
 For example, `|||` would denote the initial state of a game (all pieces in their respective kennel) and `F0F1F2F3||F0F1F2F3|` would denote a concluded game where player 0 and player 2 won.
 
-For each piece specified in the sequence, a star (`*`) may be added to denote that the piece is currently blocking other pieces. In a game of dog a piece can only be blocking when it is on the starting position (`P0`, `P16`, `P32`, `P48`), but the notation allows a piece to be marked as blocking on any position.
+For each piece specified in the sequence, a star (`*`) may be added to denote that the piece is currently blocking other pieces. In a game of Dog, a piece can only be blocking when it is on the starting position (`P0`, `P16`, `P32`, `P48`), but the notation allows a piece to be marked as blocking on any position.
 
 As an example, `P0*F1|P14P16|F0F3|P36P48*` denotes the following position.
 ```
@@ -157,18 +157,18 @@ With this convention, a piece can be unambiguously specified by a pair of player
 
 ## Actions
 
-There are six types of actions in the game: `give`, `discard`, `start`, `move`, `swap`, and `move multiple`. For each type of action there is a corresponding notation format.
+There are six types of actions in the game: `give`, `discard`, `start`, `move`, `swap`, and `move multiple`. For each type of action, there is a corresponding notation format.
 Like in the algebraic notation of chess, the notation does not include the player playing the action.
 
 
 ### Give
 **Cards allowed:** all
 
-At the start of each round all players exchange a single card with their team mate. This is done using a give action. It is notated as
+At the start of each round, all players exchange a single card with their teammate. This is done using a give action. It is notated as
 ```
 G[card]
 ```
-**Example:** `G2` means give a `2` to the team mate.
+**Example:** `G2` means give a `2` to the teammate.
 
 
 ### Discard
@@ -199,7 +199,7 @@ D[card]
 
 **Cards allowed:** `A`, `2`, `3`, `4`, `5`, `6`, `8`, `9`, `T`, `Q`, `K`
 
-**Description:** Moves a piece a certain number of steps forward or backward.
+**Description:** Moves a piece a certain number of steps forwards or backwards.
 
 **Notation:**
 ```
@@ -207,16 +207,16 @@ D[card]
 ```
 The piece is specified only by its rank and the player ID is implicitly given by the player who is playing the action.
 
-**Example:** `50` means move the piece with rank 0 5 steps forward.
+**Example:** `50` means move the piece with rank 0 5 steps forwards.
 
-There are cards that allow alternative actions, namely `A` (moving forward 1 step instead of 11) and `4` (moving backward 4 steps instead of forward 4).
+Some cards that allow alternative actions, namely `A` (moving forwards 1 step instead of 11) and `4` (moving 4 steps backwards instead of forwards).
 To activate the alternative action, an `'` is added after the card.
 
-**Example:** `4'0` means move the piece with rank 0 4 steps backward.
+**Example:** `4'0` means move the piece with rank 0 4 steps backwards.
 
 By default, a moving piece will always enter the player's finish if possible. If the finish is blocked, it will continue on the path. However, if the finish is not blocked and the player wishes to move past the finish anyway, this is denoted by adding a `-` after the piece. The notation allows this addition even if it would have no effect (e.g. because the finish is blocked anyway, or the piece is not within range to enter the finish).
 
-**Example:** `80-` means move the piece with rank 0 8 steps forward, explicitly avoiding the finish.
+**Example:** `80-` means move the piece with rank 0 8 steps forwards, explicitly avoiding the finish.
 
 
 ### Swap
@@ -231,7 +231,7 @@ By default, a moving piece will always enter the player's finish if possible. If
 ```
 The first piece is specified only by its rank and the player ID is implicitly given by the player who is playing the action.  The second piece is specified by a player ID and rank.
 
-**Example:** `J120` means swap piece with rank 0 with the piece with rank 0 of player 2.
+**Example:** `J120` means swap the piece with rank 0 with the piece with rank 0 of player 2.
 
 
 ### Move multiple
@@ -251,13 +251,13 @@ The piece is specified only by its rank and the player ID is implicitly given by
 
 **Example:** `7022213` means to move the piece with rank 0 2 steps, the piece with rank 2 2 steps, and the piece with rank 1 3 steps (in the specified order).
 
-With the Canadian rule it is also possible to move pieces of the team mate. To specify a piece of the team mate, a `'` is added after the rank. In that case, the player ID is implicitly given by the team mate of the player who is playing the action.
+With the Canadian rule, it is also possible to move pieces of the teammate. To specify a piece of the teammate, a `'` is added after the rank. In that case, the player ID is implicitly given by the teammate of the player who is playing the action.
 
-**Example:** `7022'213` means to move the piece with rank 0 of the player playing the action 2 steps, the piece with rank 2 of the team mate 2 steps, and the piece with rank 1 of the player playing the action 3 steps.
+**Example:** `7022'213` means to move the piece with rank 0 of the player playing the action 2 steps, the piece with rank 2 of the teammate 2 steps, and the piece with rank 1 of the player playing the action 3 steps.
 
 Lastly, as for the move actions, it is possible to explicitly avoid the finish by adding a `-` after the step count.
 
-**Example:** `702-2'5-` means to move the piece with rank 0 of the player playing the action 2 steps, and the piece with rank 1 of the team mate 5 steps, explicitly avoiding the finish in both times.
+**Example:** `702-2'5-` means to move the piece with rank 0 of the player playing the action 2 steps, and the piece with rank 1 of the teammate 5 steps, explicitly avoiding the finish in both times.
 
 
 ### Joker
