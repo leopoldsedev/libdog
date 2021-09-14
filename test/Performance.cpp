@@ -6,7 +6,12 @@
 
 using namespace libdog;
 
-// Best 1.6 s
+// Original 1.6 s
+// 1.16 s
+// 0.64 s
+// 0.61 s
+// 0.50 s
+// 0.42 s
 TEST(Performance, PossibleSeven) {
 	int N = 100;
 
@@ -23,7 +28,13 @@ TEST(Performance, PossibleSeven) {
 TEST(Performance, PossibleActions) {
 }
 
-// Best 29.16 s
+// Original 29.16 s
+// 21.49 s
+// 13.53 s
+// 10.57 s
+// 6.16 s
+// 5.32 s
+// 4.86 s
 TEST(Performance, FullGame) {
 	GTEST_SKIP();
 

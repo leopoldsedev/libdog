@@ -15,47 +15,29 @@ BoardState::BoardState() : pieces{{
 	reset();
 }
 
-PiecePtr BoardState::get_piece_ptr(const Piece& piece) {
-	int piece_player = piece.player;
-	int piece_idx = piece.idx;
-
-	PiecePtr piece_ptr = &pieces.at(piece_player).at(piece_idx);
-
-	return piece_ptr;
-}
-
-BoardState::BoardState(const BoardState& other) : BoardState() {
+BoardState::BoardState(const BoardState& other) : pieces(other.pieces) {
 	assert(other.check_state());
-	pieces = other.pieces;
 
-	for (std::size_t player = 0; player != kennels.size(); player++) {
-		for (std::size_t j = 0; j != kennels.size(); j++) {
-			const PiecePtr& piece = other.kennels.at(player).at(j);
-			if (piece != nullptr) {
-				kennels.at(player).at(j) = get_piece_ptr(*piece);
-			} else {
-				kennels.at(player).at(j) = nullptr;
+	path.fill(nullptr);
+
+	for (int player = 0; player < PLAYER_COUNT; player++) {
+		kennels[player].fill(nullptr);
+		finishes[player].fill(nullptr);
+
+		for (int i = 0; i < PIECE_COUNT; i++) {
+			PiecePtr piece_ptr = &pieces[player][i];
+
+			switch(piece_ptr->position.area) {
+				case Kennel:
+					kennels[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
+					break;
+				case Path:
+					path[piece_ptr->position.idx] = piece_ptr;
+					break;
+				case Finish:
+					finishes[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
+					break;
 			}
-		}
-	}
-
-	for (std::size_t player = 0; player != finishes.size(); player++) {
-		for (std::size_t j = 0; j != finishes.size(); j++) {
-			const PiecePtr& piece = other.finishes.at(player).at(j);
-			if (piece != nullptr) {
-				finishes.at(player).at(j) = get_piece_ptr(*piece);
-			} else {
-				finishes.at(player).at(j) = nullptr;
-			}
-		}
-	}
-
-	for (std::size_t i = 0; i != path.size(); i++) {
-		const PiecePtr& piece = other.path.at(i);
-		if (piece != nullptr) {
-			path.at(i) = get_piece_ptr(*piece);
-		} else {
-			path.at(i) = nullptr;
 		}
 	}
 
@@ -67,77 +49,64 @@ BoardState& BoardState::operator=(const BoardState& other) {
 
 	if (this != &other) {
 		pieces = other.pieces;
+		path.fill(nullptr);
 
-		for (std::size_t player = 0; player != kennels.size(); player++) {
-			for (std::size_t j = 0; j != kennels.size(); j++) {
-				const PiecePtr& piece = other.kennels.at(player).at(j);
-				if (piece != nullptr) {
-					kennels.at(player).at(j) = get_piece_ptr(*piece);
-				} else {
-					kennels.at(player).at(j) = nullptr;
+		for (int player = 0; player < PLAYER_COUNT; player++) {
+			kennels[player].fill(nullptr);
+			finishes[player].fill(nullptr);
+
+			for (int i = 0; i < PIECE_COUNT; i++) {
+				PiecePtr piece_ptr = &pieces[player][i];
+
+				switch(piece_ptr->position.area) {
+					case Kennel:
+						kennels[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
+						break;
+					case Path:
+						path[piece_ptr->position.idx] = piece_ptr;
+						break;
+					case Finish:
+						finishes[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
+						break;
 				}
-			}
-		}
-
-		for (std::size_t player = 0; player != finishes.size(); player++) {
-			for (std::size_t j = 0; j != finishes.size(); j++) {
-				const PiecePtr& piece = other.finishes.at(player).at(j);
-				if (piece != nullptr) {
-					finishes.at(player).at(j) = get_piece_ptr(*piece);
-				} else {
-					finishes.at(player).at(j) = nullptr;
-				}
-			}
-		}
-
-		for (std::size_t i = 0; i != path.size(); i++) {
-			const PiecePtr& piece = other.path.at(i);
-			if (piece != nullptr) {
-				path.at(i) = get_piece_ptr(*piece);
-			} else {
-				path.at(i) = nullptr;
 			}
 		}
 	}
 
-	assert(check_state());
 	return *this;
 }
 
 bool operator==(const BoardState& a, const BoardState& b) {
 	assert(a.check_state());
 	assert(b.check_state());
-	for (std::size_t player = 0; player != a.kennels.size(); player++) {
-		for (std::size_t j = 0; j != a.kennels.size(); j++) {
-			if (a.kennels.at(player).at(j) != nullptr && b.kennels.at(player).at(j) != nullptr) {
-				if (*a.kennels.at(player).at(j) != *b.kennels.at(player).at(j)) {
-					return false;
-				}
-			} else if (a.kennels.at(player).at(j) != b.kennels.at(player).at(j)) {
-				return false;
-			}
-		}
-	}
 
-	for (std::size_t player = 0; player != a.finishes.size(); player++) {
-		for (std::size_t j = 0; j != a.finishes.size(); j++) {
-			if (a.finishes.at(player).at(j) != nullptr && b.finishes.at(player).at(j) != nullptr) {
-				if (*a.finishes.at(player).at(j) != *b.finishes.at(player).at(j)) {
-					return false;
-				}
-			} else if (a.finishes.at(player).at(j) != b.finishes.at(player).at(j)) {
-				return false;
-			}
-		}
-	}
+	for (int player = 0; player < PLAYER_COUNT; player++) {
+		for (int i = 0; i < PIECE_COUNT; i++) {
+			const Piece* piece_ptr = &a.pieces[player][i];
 
-	for (std::size_t i = 0; i != a.path.size(); i++) {
-		if (a.path.at(i) != nullptr && b.path.at(i) != nullptr) {
-			if (*a.path.at(i) != *b.path.at(i)) {
+			const Piece* piece_ptr_b;
+
+			switch(piece_ptr->position.area) {
+				case Kennel:
+					piece_ptr_b = b.kennels[piece_ptr->position.player][piece_ptr->position.idx];
+					break;
+				case Path:
+					piece_ptr_b = b.path[piece_ptr->position.idx];
+					break;
+				case Finish:
+					piece_ptr_b = b.finishes[piece_ptr->position.player][piece_ptr->position.idx];
+					break;
+			}
+
+			if (piece_ptr_b == nullptr) {
 				return false;
 			}
-		} else if (a.path.at(i) != b.path.at(i)) {
-			return false;
+
+			assert(piece_ptr != nullptr);
+			assert(piece_ptr_b != nullptr);
+			if (*piece_ptr != *piece_ptr_b) {
+				return false;
+			}
 		}
 	}
 
@@ -147,9 +116,9 @@ bool operator==(const BoardState& a, const BoardState& b) {
 void BoardState::reset() {
 	for (std::size_t player = 0; player != kennels.size(); player++) {
 		for (std::size_t j = 0; j != kennels.size(); j++) {
-			Piece* piece = &pieces.at(player).at(j);
+			Piece* piece = &pieces[player][j];
 
-			kennels.at(player).at(j) = piece;
+			kennels[player][j] = piece;
 
 			piece->position = BoardPosition(Kennel, player, j);
 			piece->blocking = false;
@@ -157,83 +126,47 @@ void BoardState::reset() {
 	}
 
 	for (std::size_t player = 0; player != finishes.size(); player++) {
-		finishes.at(player).fill(nullptr);
+		finishes[player].fill(nullptr);
 	}
 
 	path.fill(nullptr);
 }
 
-static int get_start_path_idx(int player) {
-	return player * PATH_SECTION_LENGTH;
-}
-
-PiecePtr& BoardState::ref_to_piece(PieceRef piece_ref) {
-	BoardPosition position = ref_to_pos(piece_ref);
-	return get_piece(position);
-}
-
-BoardPosition BoardState::ref_to_pos(PieceRef piece_ref) const {
+PiecePtr BoardState::ref_to_piece(const PieceRef& piece_ref) const {
 	int player = piece_ref.player;
 	int rank = piece_ref.rank;
 
-	int piece_idx = 0;
+	std::vector<PiecePtr> pieces_ordered;
+	pieces_ordered.reserve(PIECE_COUNT);
 
-	// Check pieces in finish
-	auto& finish = finishes.at(player);
+	for (std::size_t i = 0; i < PLAYER_COUNT; i++) {
+		PiecePtr to_insert = const_cast<PiecePtr>(&pieces[player][i]);
 
-	for (int i = finish.size() - 1; i >= 0; i--) {
-		const PiecePtr& piece = finish.at(i);
+		std::size_t insert_idx = 0;
 
-		if (piece != nullptr) {
-			if (piece_idx == rank) {
-				return BoardPosition(Finish, player, i);
+		for (; insert_idx < pieces_ordered.size(); insert_idx++) {
+			PiecePtr piece_ptr = pieces_ordered[insert_idx];
+			assert(piece_ptr != nullptr);
+			if (piece_ptr->is_behind(*to_insert)) {
+				break;
 			}
-			piece_idx++;
 		}
+
+		pieces_ordered.insert(pieces_ordered.begin() + insert_idx, to_insert);
 	}
 
-	int start_path_idx = get_start_path_idx(player);
+	PiecePtr result = pieces_ordered[rank];
+	return result;
+}
 
-	// Check non-blocking pieces on path
-	for (int i = start_path_idx; i >= (start_path_idx - (int) path.size()); i--) {
-		int i_mod = positive_mod(i, path.size());
+PiecePtr& BoardState::ref_to_piece_ptr_ref(const PieceRef& piece_ref) {
+	PiecePtr piece_ptr = ref_to_piece(piece_ref);
+	return get_piece(piece_ptr->position);
+}
 
-		const PiecePtr& piece = path.at(i_mod);
-
-		if (piece != nullptr && piece->player == player && !piece->blocking) {
-			if (piece_idx == rank) {
-				return BoardPosition(Path, player, i_mod);
-			}
-			piece_idx++;
-		}
-	}
-
-	// Check potential blocking piece at start
-	const PiecePtr& piece = path.at(start_path_idx);
-
-	if (piece != nullptr && piece->player == player && piece->blocking) {
-		if (piece_idx == rank) {
-			return BoardPosition(Path, player, start_path_idx);
-		}
-		piece_idx++;
-	}
-
-	// Check pieces in kennel
-	auto& kennel = kennels.at(player);
-
-	for (std::size_t i = 0; i < kennel.size(); i++) {
-		const PiecePtr& piece = kennel.at(i);
-
-		if (piece != nullptr) {
-			if (piece_idx == rank) {
-				return BoardPosition(Kennel, player, i);
-			}
-			piece_idx++;
-		}
-	}
-
-	// A piece reference that contains a valid player and rank always resolves to a piece
-	assert(false);
+BoardPosition BoardState::ref_to_pos(const PieceRef& piece_ref) const {
+    PiecePtr piece_ptr = ref_to_piece(piece_ref);
+	return piece_ptr->position;
 }
 
 bool BoardState::get_kennel_piece(int player, PiecePtr** result) {
@@ -257,6 +190,10 @@ void BoardState::start_piece(PiecePtr& piece) {
 	int start_path_idx = get_start_path_idx(piece->player);
 	BoardPosition start_position = BoardPosition(start_path_idx);
 	move_piece(piece, start_position, true);
+}
+
+PiecePtr& BoardState::get_piece(int path_idx) {
+	return path.at(path_idx);
 }
 
 PiecePtr& BoardState::get_piece(BoardPosition position) {
@@ -349,7 +286,7 @@ std::vector<PieceRef> BoardState::get_pieces_in_area(int player, Area area) {
 
 	for (std::size_t i = 0; i < PIECE_COUNT; i++) {
 		PieceRef piece_ref(player, i);
-		PiecePtr& piece = ref_to_piece(piece_ref);
+		PiecePtr piece = ref_to_piece(piece_ref);
 
 		if (piece->position.area == area) {
 			result.push_back(piece_ref);
@@ -357,43 +294,6 @@ std::vector<PieceRef> BoardState::get_pieces_in_area(int player, Area area) {
 	}
 
 	return result;
-}
-
-static int calc_steps_to_start(int player, int from_path_idx) {
-	int start_path_idx = get_start_path_idx(player);
-
-	int steps_to_start;
-
-	if (start_path_idx < from_path_idx) {
-		steps_to_start = (start_path_idx + PATH_LENGTH) - from_path_idx;
-	} else {
-		steps_to_start = start_path_idx - from_path_idx;
-	}
-
-	return steps_to_start;
-}
-
-static int calc_steps_on_path(int player, int from_path_idx, bool piece_blocking, int count, bool into_finish) {
-	bool backwards = count < 0;
-
-	int steps_on_path;
-
-	if (into_finish && !backwards) {
-		int steps_to_start = calc_steps_to_start(player, from_path_idx);
-
-		if (piece_blocking) {
-			// Piece is blocked, which means it cannot enter finish directly -> forced to take all steps on path
-			steps_on_path = count;
-		} else {
-			// Piece may enter finish -> only needs to take steps on path to go right before finish
-			steps_on_path = std::min(steps_to_start, count);
-		}
-	} else {
-		// Piece going backwards or does not want to enter finish -> take all steps on path
-		steps_on_path = count;
-	}
-
-	return steps_on_path;
 }
 
 bool BoardState::start_piece(int player, bool modify_state) {
@@ -566,7 +466,7 @@ int BoardState::possible_forward_steps_on_path(int from_path_idx, bool backwards
 			continue;
 		}
 
-		PiecePtr& piece = get_piece(BoardPosition(path_idx));
+		PiecePtr& piece = get_piece(path_idx);
 
 		if (piece != nullptr && piece->blocking) {
 			break;
@@ -784,7 +684,7 @@ bool BoardState::move_multiple_pieces_naive(std::vector<MoveSpecifier> move_acti
 	// pointers stay valid even if the pieces they point to are moved.
 	std::vector<Piece*> piece_ptrs;
 	for (MoveSpecifier move_specifier : move_actions) {
-		PiecePtr& piece = ref_to_piece(move_specifier.piece_ref);
+		PiecePtr piece = ref_to_piece(move_specifier.piece_ref);
 		piece_ptrs.push_back(piece);
 	}
 

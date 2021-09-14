@@ -248,7 +248,7 @@ bool DogGame::try_play(int player, const Move& move, bool modify_state) {
 	int count = move.get_count();
 	bool avoid_finish = move.get_avoid_finish();
 
-	PiecePtr& piece = board_state.ref_to_piece(move.get_piece_ref());
+	PiecePtr& piece = board_state.ref_to_piece_ptr_ref(move.get_piece_ref());
 
 	if (piece->player != player) {
 		return false;
@@ -263,7 +263,7 @@ bool DogGame::try_play(int player, const MoveMultiple& move_multiple, bool modif
 	player = switch_to_team_mate_if_done(player);
 
 	for (MoveSpecifier move_specifier : move_multiple.get_move_specifiers()) {
-		PiecePtr& piece = board_state.ref_to_piece(move_specifier.piece_ref);
+		PiecePtr piece = board_state.ref_to_piece(move_specifier.piece_ref);
 
 		if (canadian_rule) {
 			if (piece->player != player && piece->player != GET_TEAM_PLAYER_IDX(player)) {
@@ -293,8 +293,8 @@ bool DogGame::try_play(int player, const MoveMultiple& move_multiple, bool modif
 bool DogGame::try_play(int player, const Swap& swap, bool modify_state) {
 	player = switch_to_team_mate_if_done(player);
 
-	PiecePtr& piece_1 = board_state.ref_to_piece(swap.get_piece_1());
-	PiecePtr& piece_2 = board_state.ref_to_piece(swap.get_piece_2());
+	PiecePtr& piece_1 = board_state.ref_to_piece_ptr_ref(swap.get_piece_1());
+	PiecePtr& piece_2 = board_state.ref_to_piece_ptr_ref(swap.get_piece_2());
 
 	if (piece_1->player != player && piece_2->player != player) {
 		// One of the pieces has to belong to the player that is playing the swap
@@ -350,7 +350,7 @@ std::vector<ActionVar> DogGame::possible_moves(int player, Card card, int count,
 
 	for (int i = 0; i < PIECE_COUNT; i++) {
 		PieceRef piece_ref(player, i);
-		PiecePtr& piece = board_state.ref_to_piece(piece_ref);
+		PiecePtr piece = board_state.ref_to_piece(piece_ref);
 
 		if (piece->position.area == Kennel) {
 			continue;
@@ -476,10 +476,11 @@ std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, i
 		return {};
 	}
 
+	// TODO Wrap BoardPosition in a unique_ptr to maybe increase performance
 	std::vector<std::tuple<PieceRef, BoardPosition>> pieces;
 
 	for (PieceRef& piece_ref : piece_refs) {
-		PiecePtr& piece = board_state.ref_to_piece(piece_ref);
+		PiecePtr piece = board_state.ref_to_piece(piece_ref);
 		assert(piece != nullptr);
 		pieces.push_back(std::make_tuple(piece_ref, piece->position));
 		assert(board_state.get_piece(piece->position) != nullptr);

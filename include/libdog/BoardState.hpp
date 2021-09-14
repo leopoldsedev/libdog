@@ -9,14 +9,13 @@
 #include "Piece.hpp"
 #include "PieceRef.hpp"
 #include "BoardPosition.hpp"
+#include "BoardUtil.hpp"
 #include "Notation.hpp"
 #include "Constants.hpp"
 #include "Action.hpp"
 
 
 namespace libdog {
-
-using PiecePtr = Piece*;
 
 class BoardState {
 	public:
@@ -38,15 +37,17 @@ class BoardState {
 
 		void reset();
 
-		PiecePtr& ref_to_piece(PieceRef piece_ref);
+		PiecePtr ref_to_piece(const PieceRef& piece_ref) const;
 
-		BoardPosition ref_to_pos(PieceRef piece_ref) const;
+		PiecePtr& ref_to_piece_ptr_ref(const PieceRef& piece_ref);
 
-		PiecePtr get_piece_ptr(const Piece& piece);
+		BoardPosition ref_to_pos(const PieceRef& piece_ref) const;
 
 		bool get_kennel_piece(int player, PiecePtr** result);
 
 		void start_piece(PiecePtr& piece);
+
+		PiecePtr& get_piece(int path_idx);
 
 		PiecePtr& get_piece(BoardPosition position);
 

@@ -102,10 +102,11 @@ class DogGame {
 
 		struct action_state_hash {
 			size_t operator()(const std::tuple<ActionVar, BoardState> &t) const {
-				// TODO Optimize this hash
-				BoardPosition pos0 = std::get<1>(t).ref_to_pos(PieceRef(0, 0));
-				BoardPosition pos1 = std::get<1>(t).ref_to_pos(PieceRef(1, 0));
-				return pos0.idx + pos1.idx;
+				BoardPosition pos0 = std::get<1>(t).pieces[0][0].position;
+				BoardPosition pos1 = std::get<1>(t).pieces[1][0].position;
+				BoardPosition pos2 = std::get<1>(t).pieces[2][0].position;
+				BoardPosition pos3 = std::get<1>(t).pieces[3][0].position;
+				return pos0.idx + pos1.idx + pos2.idx + pos3.idx;
 			}
 		};
 

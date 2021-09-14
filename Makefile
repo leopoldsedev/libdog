@@ -44,3 +44,7 @@ test_notation: debug
 .PHONY: test_perf
 test_perf: release
 	cd build && ctest --verbose --stop-on-failure --tests-regex ^Performance.*$
+
+.PHONY: callgrind
+callgrind: release
+	valgrind --tool=callgrind ./build/libdog_test --gtest_filter=Performance.PossibleSeven
