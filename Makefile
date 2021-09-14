@@ -36,3 +36,11 @@ clean:
 .PHONY: test
 test: debug
 	cd build && ctest --verbose --stop-on-failure
+
+.PHONY: test_notation
+test_notation: debug
+	cd build && ctest --verbose --stop-on-failure --tests-regex ^NotationParsing.*$
+
+.PHONY: test_perf
+test_perf: release
+	cd build && ctest --verbose --stop-on-failure --tests-regex ^Performance.*$
