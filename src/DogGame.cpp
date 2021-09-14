@@ -31,13 +31,13 @@ void DogGame::_reset() {
 	give_phase_done = false;
 }
 
-void DogGame::reset_with_deck(std::string card_str) {
+void DogGame::reset_with_deck(const std::string& card_str) {
 	std::vector<Card> cards = cards_from_str(card_str);
 	cards_state = CardsState(cards);
 	_reset();
 }
 
-void DogGame::load_board(std::string notation_str) {
+void DogGame::load_board(const std::string& notation_str) {
 	board_state = from_notation(notation_str);
 }
 
@@ -69,12 +69,12 @@ int DogGame::result() {
 	return -1;
 }
 
-int DogGame::calc_next_hand_size(int current_hand_size) {
+int DogGame::calc_next_hand_size(int current_hand_size) const {
 	if (current_hand_size == MIN_HANDOUT_SIZE) {
 		return STARTING_HANDOUT_SIZE;
-	} else {
-		return next_hand_size - 1;
 	}
+
+	return next_hand_size - 1;
 }
 
 void DogGame::next_turn() {
@@ -221,21 +221,16 @@ bool DogGame::try_play(int player, const Give& give, bool modify_state) {
 
 bool DogGame::try_play(int player, const Discard& discard, __attribute__((unused)) bool modify_state) {
 	std::vector<ActionVar> possible_card_plays = get_possible_card_plays(player);
-	if (possible_card_plays.size() > 0) {
+	if (!possible_card_plays.empty()) {
 		// Can only discard a card if none of them can be played
 		return false;
 	}
 
+	// Card has to be in player's hand to be discarded
 	bool has_card = cards_state.check_player_has_card(player, discard.get_card());
 
-	if (!has_card) {
-		// Card has to be in player's hand to be discarded
-		return false;
-	}
-
 	// Card will be removed from hand in modify_state_common()
-
-	return true;
+	return has_card;
 }
 
 bool DogGame::try_play(int player, __attribute__((unused)) const Start& start, bool modify_state) {
@@ -391,7 +386,7 @@ std::vector<ActionVar> DogGame::possible_moves(int player, Card card, int count,
 
 // TODO Refactor this mess of a function
 DogGame::my_set DogGame::_possible_move_multiples(int player, Card card, BoardState board, int count, bool is_joker, std::vector<std::tuple<PieceRef, BoardPosition>> pieces, std::vector<MoveSpecifier> move_specifiers) {
-	assert(pieces.size() > 0);
+	assert(!pieces.empty());
 
 	my_set result;
 
@@ -476,7 +471,7 @@ std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, i
 		APPEND(piece_refs, board_state.get_pieces_in_area(GET_TEAM_PLAYER_IDX(player), Finish));
 	}
 
-	if (piece_refs.size() == 0) {
+	if (piece_refs.empty()) {
 		return {};
 	}
 
@@ -532,7 +527,7 @@ std::vector<ActionVar> DogGame::get_possible_actions(int player) {
 
 	std::vector<ActionVar> result = get_possible_card_plays(player);
 
-	if (result.size() == 0) {
+	if (result.empty()) {
 		// None of the cards can be played, player can only discard one of them
 
 		APPEND(result, possible_discards(player));

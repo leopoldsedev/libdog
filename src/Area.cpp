@@ -1,5 +1,7 @@
 #include <libdog/Area.hpp>
 
+#include <cassert>
+
 
 namespace libdog {
 

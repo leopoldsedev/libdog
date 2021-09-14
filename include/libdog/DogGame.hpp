@@ -29,19 +29,21 @@ class DogGame {
 
 		DogGame(bool canadian_rule, bool check_turns, bool check_hands) : DogGame(canadian_rule, check_turns, check_hands, false) {}
 
-		DogGame(bool canadian_rule) : DogGame(canadian_rule, true, true, true) {}
+		explicit DogGame(bool canadian_rule) : DogGame(canadian_rule, true, true, true) {}
 
 		void reset();
 
-		void reset_with_deck(std::string card_str);
+		void reset_with_deck(const std::string& card_str);
 
-		void load_board(std::string notation_str);
+		void load_board(const std::string& notation_str);
 
 		// -1 ... undecided (game not concluded yet)
 		//  0 ... team of player 0 won
 		//  1 ... team of player 1 won
 		//  2 ... both teams won (invalid, should not be possible)
 		int result();
+
+		// TODO Add functions to inspect card_state (hands of players, cards that were played
 
 		bool play_notation(int player, std::string notation_str, bool modify_state = true);
 
@@ -64,7 +66,7 @@ class DogGame {
 
 		void _reset();
 
-		int calc_next_hand_size(int current_hand_size);
+		int calc_next_hand_size(int current_hand_size) const;
 
 		void next_turn();
 

@@ -8,9 +8,9 @@
 #include <libdog/Constants.hpp>
 
 
-using namespace std;
-
 namespace libdog {
+
+using std::vector;
 
 static void add_suite(vector<Card>& cards) {
 	cards.push_back(Ace);
@@ -44,20 +44,23 @@ static vector<Card> get_dog_card_set() {
 
 class CardsState {
 	public:
-		CardsState(vector<Card> cards);
+		explicit CardsState(vector<Card> cards);
 
 		CardsState() : CardsState(get_dog_card_set()) {
 		}
 
 		void hand_out_cards(int count);
 
-		bool check_player_has_card(int player, Card card);
+		[[nodiscard]]
+		bool check_player_has_card(int player, Card card) const;
 
 		void discard(int player, Card card);
 
-		bool hands_empty();
+		[[nodiscard]]
+		bool hands_empty() const;
 
-		vector<Card> get_hand_cards(int player, bool deduplicate = false);
+		[[nodiscard]]
+		vector<Card> get_hand_cards(int player, bool deduplicate = false) const;
 
 		void give_card(int player, Card card);
 
@@ -67,6 +70,7 @@ class CardsState {
 
 		void execute_give();
 
+		[[nodiscard]]
 		string to_str() const;
 
 		friend ostream& operator<<(ostream& os, CardsState const& obj) {
@@ -81,6 +85,9 @@ class CardsState {
 		CardStack discarded;
 
 		CardStack& get_hand(int player);
+
+		[[nodiscard]]
+		const CardStack& get_hand(int player) const;
 };
 
-};
+}

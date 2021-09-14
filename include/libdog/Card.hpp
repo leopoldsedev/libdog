@@ -34,6 +34,6 @@ Card card_from_string(std::string card_str);
 
 std::string card_to_string(Card card);
 
-std::vector<Card> cards_from_str(std::string card_str);
+std::vector<Card> cards_from_str(const std::string& card_str);
 
 }

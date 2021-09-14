@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+
 #include <libdog/Area.hpp>
 #include <libdog/BoardPosition.hpp>
 
@@ -19,7 +21,7 @@ class Piece {
 		Piece(int player, BoardPosition position) : Piece(player, position, false) {
 		}
 
-		Piece(int player) : Piece(player, BoardPosition(0)) {
+		explicit Piece(int player) : Piece(player, BoardPosition(0)) {
 		}
 
 		friend bool operator==(const Piece& a, const Piece& b) = default;

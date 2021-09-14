@@ -12,6 +12,10 @@ CardStack& CardsState::get_hand(int player) {
 	return hands.at(player);
 }
 
+const CardStack& CardsState::get_hand(int player) const {
+	return hands.at(player);
+}
+
 void CardsState::hand_out_cards(int count) {
 	for (int player = 0; player < PLAYER_COUNT; player++) {
 		CardStack& hand = get_hand(player);
@@ -27,8 +31,8 @@ void CardsState::hand_out_cards(int count) {
 	}
 }
 
-bool CardsState::check_player_has_card(int player, Card card) {
-	CardStack& hand = get_hand(player);
+bool CardsState::check_player_has_card(int player, Card card) const {
+	const CardStack& hand = get_hand(player);
 	return hand.contains(card);
 }
 
@@ -40,11 +44,11 @@ void CardsState::discard(int player, Card card) {
 	}
 }
 
-bool CardsState::hands_empty() {
+bool CardsState::hands_empty() const {
 	for (int player = 0; player < PLAYER_COUNT; player++) {
-		CardStack& hand = get_hand(player);
+		const CardStack& hand = get_hand(player);
 
-		if (hand.size() > 0) {
+		if (!hand.empty()) {
 			return false;
 		}
 	}
@@ -52,8 +56,8 @@ bool CardsState::hands_empty() {
 	return true;
 }
 
-vector<Card> CardsState::get_hand_cards(int player, bool deduplicate) {
-	CardStack& hand = get_hand(player);
+vector<Card> CardsState::get_hand_cards(int player, bool deduplicate) const {
+	const CardStack& hand = get_hand(player);
 
 	vector<Card> result = hand.get_cards();
 
