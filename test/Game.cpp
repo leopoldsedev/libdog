@@ -679,6 +679,16 @@ TEST(PossibleAction, Swap) {
 	EXPECT_THAT(actions, testing::Contains(from_notation(2, "J001")));
 }
 
+TEST(BasicTest, BoardStateEquality) {
+	BoardState state_1 = from_notation("P12P53|P16*P43F2F3||P15P56F3");
+	BoardState state_2 = from_notation("P12P53|P16*P43F2F3||P15P56F3");
+	BoardState state_3 = from_notation("P12P53|P16P43F2F3||P15P56F3");
+
+	EXPECT_TRUE(state_1 == state_2);
+	EXPECT_FALSE(state_1 == state_3);
+	EXPECT_FALSE(state_2 == state_3);
+}
+
 TEST(PossibleAction, SevenSimple) {
 	DogGame game(true, false, false, false);
 	std::vector<ActionVar> actions;

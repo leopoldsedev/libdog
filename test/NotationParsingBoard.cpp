@@ -52,7 +52,14 @@ TEST(NotationParsingBoard, Empty) {
 	EXPECT_PLAYER_AT(BoardPosition(Kennel, 3, 3), 3, false);
 }
 
-TEST(NotationParsingBoard, Simple) {
+TEST(NotationParsingBoard, Simple1) {
+	BoardState board;
+
+	NOTATION_TEST(board, "P0|||");
+	EXPECT_PLAYER_AT(BoardPosition(0), 0, false);
+}
+
+TEST(NotationParsingBoard, Simple2) {
 	BoardState board;
 
 	NOTATION_TEST(board, "P0|P63|F0|F3");

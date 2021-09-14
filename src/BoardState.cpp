@@ -1,20 +1,40 @@
 #include <libdog/BoardState.hpp>
 
 #include "Util.hpp"
+#include "Debug.hpp"
 
 
 namespace libdog {
 
-BoardState::BoardState() {
+BoardState::BoardState() : pieces{{
+		{{ Piece(0, 0, BoardPosition(Kennel, 0, 0), false), Piece(0, 1, BoardPosition(Kennel, 0, 1), false), Piece(0, 2, BoardPosition(Kennel, 0, 2), false), Piece(0, 3, BoardPosition(Kennel, 0, 3), false) }},
+		{{ Piece(1, 0, BoardPosition(Kennel, 1, 0), false), Piece(1, 1, BoardPosition(Kennel, 1, 1), false), Piece(1, 2, BoardPosition(Kennel, 1, 2), false), Piece(1, 3, BoardPosition(Kennel, 1, 3), false) }},
+		{{ Piece(2, 0, BoardPosition(Kennel, 2, 0), false), Piece(2, 1, BoardPosition(Kennel, 2, 1), false), Piece(2, 2, BoardPosition(Kennel, 2, 2), false), Piece(2, 3, BoardPosition(Kennel, 2, 3), false) }},
+		{{ Piece(3, 0, BoardPosition(Kennel, 3, 0), false), Piece(3, 1, BoardPosition(Kennel, 3, 1), false), Piece(3, 2, BoardPosition(Kennel, 3, 2), false), Piece(3, 3, BoardPosition(Kennel, 3, 3), false) }}
+	}} {
 	reset();
 }
 
-BoardState::BoardState(const BoardState& other) {
+PiecePtr BoardState::get_piece_ptr(const Piece& piece) {
+	int piece_player = piece.player;
+	int piece_idx = piece.idx;
+
+	PiecePtr piece_ptr = &pieces.at(piece_player).at(piece_idx);
+
+	return piece_ptr;
+}
+
+BoardState::BoardState(const BoardState& other) : BoardState() {
+	assert(other.check_state());
+	pieces = other.pieces;
+
 	for (std::size_t player = 0; player != kennels.size(); player++) {
 		for (std::size_t j = 0; j != kennels.size(); j++) {
 			const PiecePtr& piece = other.kennels.at(player).at(j);
 			if (piece != nullptr) {
-				kennels.at(player).at(j) = std::make_unique<Piece>(*piece);
+				kennels.at(player).at(j) = get_piece_ptr(*piece);
+			} else {
+				kennels.at(player).at(j) = nullptr;
 			}
 		}
 	}
@@ -23,7 +43,9 @@ BoardState::BoardState(const BoardState& other) {
 		for (std::size_t j = 0; j != finishes.size(); j++) {
 			const PiecePtr& piece = other.finishes.at(player).at(j);
 			if (piece != nullptr) {
-				finishes.at(player).at(j) = std::make_unique<Piece>(*piece);
+				finishes.at(player).at(j) = get_piece_ptr(*piece);
+			} else {
+				finishes.at(player).at(j) = nullptr;
 			}
 		}
 	}
@@ -31,20 +53,26 @@ BoardState::BoardState(const BoardState& other) {
 	for (std::size_t i = 0; i != path.size(); i++) {
 		const PiecePtr& piece = other.path.at(i);
 		if (piece != nullptr) {
-			path.at(i) = std::make_unique<Piece>(*piece);
+			path.at(i) = get_piece_ptr(*piece);
+		} else {
+			path.at(i) = nullptr;
 		}
 	}
+
+	assert(check_state());
 }
 
-BoardState& BoardState::operator=(const BoardState& other)
-{
-	if (this != &other)
-	{
+BoardState& BoardState::operator=(const BoardState& other) {
+	assert(other.check_state());
+
+	if (this != &other) {
+		pieces = other.pieces;
+
 		for (std::size_t player = 0; player != kennels.size(); player++) {
 			for (std::size_t j = 0; j != kennels.size(); j++) {
 				const PiecePtr& piece = other.kennels.at(player).at(j);
 				if (piece != nullptr) {
-					kennels.at(player).at(j) = std::make_unique<Piece>(*piece);
+					kennels.at(player).at(j) = get_piece_ptr(*piece);
 				} else {
 					kennels.at(player).at(j) = nullptr;
 				}
@@ -55,7 +83,7 @@ BoardState& BoardState::operator=(const BoardState& other)
 			for (std::size_t j = 0; j != finishes.size(); j++) {
 				const PiecePtr& piece = other.finishes.at(player).at(j);
 				if (piece != nullptr) {
-					finishes.at(player).at(j) = std::make_unique<Piece>(*piece);
+					finishes.at(player).at(j) = get_piece_ptr(*piece);
 				} else {
 					finishes.at(player).at(j) = nullptr;
 				}
@@ -65,16 +93,20 @@ BoardState& BoardState::operator=(const BoardState& other)
 		for (std::size_t i = 0; i != path.size(); i++) {
 			const PiecePtr& piece = other.path.at(i);
 			if (piece != nullptr) {
-				path.at(i) = std::make_unique<Piece>(*piece);
+				path.at(i) = get_piece_ptr(*piece);
 			} else {
 				path.at(i) = nullptr;
 			}
 		}
 	}
+
+	assert(check_state());
 	return *this;
 }
 
 bool operator==(const BoardState& a, const BoardState& b) {
+	assert(a.check_state());
+	assert(b.check_state());
 	for (std::size_t player = 0; player != a.kennels.size(); player++) {
 		for (std::size_t j = 0; j != a.kennels.size(); j++) {
 			if (a.kennels.at(player).at(j) != nullptr && b.kennels.at(player).at(j) != nullptr) {
@@ -113,23 +145,22 @@ bool operator==(const BoardState& a, const BoardState& b) {
 }
 
 void BoardState::reset() {
-	// TODO Maybe do not replace all references and instead reset those that already exist to not introduce inconsistencies from returned references to the old pointers
 	for (std::size_t player = 0; player != kennels.size(); player++) {
 		for (std::size_t j = 0; j != kennels.size(); j++) {
-			kennels.at(player).at(j) = std::make_unique<Piece>(player, BoardPosition(Kennel, player, j), false);
+			Piece* piece = &pieces.at(player).at(j);
 
+			kennels.at(player).at(j) = piece;
+
+			piece->position = BoardPosition(Kennel, player, j);
+			piece->blocking = false;
 		}
 	}
 
 	for (std::size_t player = 0; player != finishes.size(); player++) {
-		for (std::size_t j = 0; j != finishes.size(); j++) {
-			finishes.at(player).at(j) = nullptr;
-		}
+		finishes.at(player).fill(nullptr);
 	}
 
-	for (std::size_t i = 0; i != path.size(); i++) {
-		path.at(i) = nullptr;
-	}
+	path.fill(nullptr);
 }
 
 static int get_start_path_idx(int player) {
@@ -274,9 +305,7 @@ void BoardState::place_at_kennel(PiecePtr& piece) {
 
 	for (int i = kennel.size() - 1; i >= 0; i--) {
 		if (kennel.at(i) == nullptr) {
-			piece->position = BoardPosition(Kennel, piece->player, i);
-
-			kennel.at(i) = std::move(piece);
+			move_piece(piece, BoardPosition(Kennel, piece->player, i), false);
 
 			return;
 		}
@@ -290,7 +319,9 @@ void BoardState::move_piece(PiecePtr& piece, BoardPosition position, bool blocki
 
 	piece->position = position;
 	piece->blocking = blocking;
-	target = std::move(piece);
+
+	target = piece;
+	piece = nullptr;
 }
 
 void BoardState::swap_pieces(PiecePtr& piece1, PiecePtr& piece2) {
@@ -660,7 +691,19 @@ bool BoardState::swap_pieces(PiecePtr& piece_1, PiecePtr& piece_2, bool modify_s
 	return true;
 }
 
-bool BoardState::check_state() {
+// TODO Add more checks now that unique_ptr isn't used anymore
+// TODO the following things must be unique: piece position, piece player/idx pair
+// TODO A piece must be pointed to only once from the board
+bool BoardState::check_state() const {
+	for (int player = 0; player != PLAYER_COUNT; player++) {
+		for (int idx = 0; idx != PIECE_COUNT; idx++) {
+			const Piece& piece = pieces.at(player).at(idx);
+			if (piece.player != player || piece.idx != idx) {
+				return false;
+			}
+		}
+	}
+
 	std::array<int, PLAYER_COUNT> piece_cnt;
 	piece_cnt.fill(0);
 
@@ -668,7 +711,7 @@ bool BoardState::check_state() {
 		bool expect_pieces_only = false;
 
 		for (std::size_t j = 0; j != kennels.size(); j++) {
-			PiecePtr& piece = kennels.at(player).at(j);
+			const PiecePtr& piece = kennels.at(player).at(j);
 
 			if (piece != nullptr) {
 				if (piece->player != player) {
@@ -691,7 +734,7 @@ bool BoardState::check_state() {
 	}
 
 	for (std::size_t i = 0; i != path.size(); i++) {
-		PiecePtr& piece = path.at(i);
+		const PiecePtr& piece = path.at(i);
 
 		if (piece != nullptr) {
 			if (piece->position != BoardPosition(i)) {
@@ -704,7 +747,7 @@ bool BoardState::check_state() {
 
 	for (int player = 0; player != PLAYER_COUNT; player++) {
 		for (std::size_t j = 0; j != finishes.size(); j++) {
-			PiecePtr& piece = finishes.at(player).at(j);
+			const PiecePtr& piece = finishes.at(player).at(j);
 
 			if (piece != nullptr) {
 				if (piece->player != player) {
@@ -742,7 +785,7 @@ bool BoardState::move_multiple_pieces_naive(std::vector<MoveSpecifier> move_acti
 	std::vector<Piece*> piece_ptrs;
 	for (MoveSpecifier move_specifier : move_actions) {
 		PiecePtr& piece = ref_to_piece(move_specifier.piece_ref);
-		piece_ptrs.push_back(piece.get());
+		piece_ptrs.push_back(piece);
 	}
 
 	for (std::size_t i = 0; i < move_actions.size(); i++) {

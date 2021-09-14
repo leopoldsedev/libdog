@@ -39,6 +39,7 @@ void DogGame::reset_with_deck(const std::string& card_str) {
 
 void DogGame::load_board(const std::string& notation_str) {
 	board_state = from_notation(notation_str);
+	assert(board_state.check_state());
 }
 
 // -1 ... undecided (game not concluded yet)
@@ -431,7 +432,7 @@ DogGame::my_set DogGame::_possible_move_multiples(int player, Card card, BoardSt
 		std::vector<Piece*> piece_ptrs;
 		for (std::tuple<PieceRef, BoardPosition> t : pieces) {
 			PiecePtr& piece = board_copy.get_piece(std::get<1>(t));
-			piece_ptrs.push_back(piece.get());
+			piece_ptrs.push_back(piece);
 		}
 
 		bool legal = board_copy.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);

@@ -525,6 +525,7 @@ optional<BoardState> try_parse_notation(string notation_str) {
 			assert(success);
 
 			result.move_piece(*piece, position, blocking);
+			assert(result.check_state());
 
 			piece_cnt++;
 		}

@@ -16,11 +16,14 @@
 
 namespace libdog {
 
-typedef std::unique_ptr<Piece> PiecePtr;
+using PiecePtr = Piece*;
 
 class BoardState {
 	public:
 		// TODO Think about a way to properly abstract away the fact that after the last path index the first path index begins again
+
+		std::array<std::array<Piece, PIECE_COUNT>, PLAYER_COUNT> pieces;
+
 		std::array<PiecePtr, PATH_LENGTH> path;
 		std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
 		std::array<std::array<PiecePtr, KENNEL_SIZE>, PLAYER_COUNT> kennels;
@@ -38,6 +41,8 @@ class BoardState {
 		PiecePtr& ref_to_piece(PieceRef piece_ref);
 
 		BoardPosition ref_to_pos(PieceRef piece_ref) const;
+
+		PiecePtr get_piece_ptr(const Piece& piece);
 
 		bool get_kennel_piece(int player, PiecePtr** result);
 
@@ -69,7 +74,7 @@ class BoardState {
 
 		bool try_enter_finish(int player, int from_path_idx, int count, bool piece_blocking, BoardPosition& position_result, int& count_on_path_result);
 
-		bool check_state();
+		bool check_state() const;
 
 		friend std::ostream& operator<<(std::ostream& os, BoardState const& obj) {
 			  return os << obj.to_str();
