@@ -90,6 +90,8 @@ class BoardState {
 
 		int possible_forward_steps_in_finish(int player, int from_finish_idx);
 
+		bool possible_one_step_on_path(int from_path_idx, bool backwards);
+
 		int possible_forward_steps_on_path(int from_path_idx, bool backwards);
 
 		int possible_steps_of_piece(int player, BoardPosition position, bool piece_blocking, bool backwards);

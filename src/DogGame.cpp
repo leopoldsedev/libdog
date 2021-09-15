@@ -386,10 +386,8 @@ std::vector<ActionVar> DogGame::possible_moves(int player, Card card, int count,
 }
 
 // TODO Refactor this mess of a function
-DogGame::my_set DogGame::_possible_move_multiples(int player, Card card, BoardState board, int count, bool is_joker, std::vector<std::tuple<PieceRef, BoardPosition>> pieces, std::vector<MoveSpecifier> move_specifiers) {
+void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardState board, int count, bool is_joker, std::vector<std::tuple<PieceRef, BoardPosition>> pieces, std::vector<MoveSpecifier> move_specifiers) {
 	assert(!pieces.empty());
-
-	my_set result;
 
 	if (count == 0) {
 		MoveMultiple move_mult(card, move_specifiers, is_joker);
@@ -407,9 +405,8 @@ DogGame::my_set DogGame::_possible_move_multiples(int player, Card card, BoardSt
 #endif
 
 		std::tuple<ActionVar, BoardState> pair = std::make_tuple(move_mult, board);
-		result.insert(pair);
-
-		return result;
+		s.insert(pair);
+		return;
 	}
 
 	for (std::size_t i = 0; i < pieces.size(); i++) {
@@ -444,19 +441,28 @@ DogGame::my_set DogGame::_possible_move_multiples(int player, Card card, BoardSt
 				std::get<1>(pieces_copy.at(i)) = piece_ptrs.at(i)->position;
 			}
 
+			// If one piece is done adding 1-steps, the piece shall not be used again in the remaining 1-steps
+			if (!move_specifiers.empty()) {
+				PieceRef last_piece_ref = move_specifiers.back().piece_ref;
+				if (last_piece_ref != piece_ref) {
+					for (std::size_t i = 0; i < pieces_copy.size(); i++) {
+						if (std::get<0>(pieces_copy[i]) == last_piece_ref) {
+							pieces_copy.erase(pieces_copy.begin() + i);
+							break;
+						}
+					}
+				}
+			}
+
 			std::vector<MoveSpecifier> move_specifiers_copy = move_specifiers;
 			move_specifiers_copy.push_back(move_specifier);
 
-			my_set s = _possible_move_multiples(player, card, board_copy, count - 1, is_joker, pieces_copy, move_specifiers_copy);
-
-			result.insert(s.begin(), s.end());
+			_possible_move_multiples(s, player, card, board_copy, count - 1, is_joker, pieces_copy, move_specifiers_copy);
 		}
 	}
-
-	return result;
 }
 
-// TODO Make more efficient
+// TODO Optimize: avoid BoardState copying by playing the move in the original instance and adding a mechanism to undo the moves
 // TODO Currently avoid_finish flag is always set to false, generate also the moves that have this flag set to true
 // TODO Consolidate consecutive moves of the same piece
 std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, int count, bool is_joker) {
@@ -486,7 +492,8 @@ std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, i
 		assert(board_state.get_piece(piece->position) != nullptr);
 	}
 
-	my_set s = _possible_move_multiples(player, card, board_state, count, is_joker, pieces, {});
+	my_set s;
+	_possible_move_multiples(s, player, card, board_state, count, is_joker, pieces, {});
 
 	for (std::tuple<ActionVar, BoardState> x : s) {
 		auto action = std::get<0>(x);

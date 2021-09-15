@@ -313,11 +313,14 @@ bool BoardState::start_piece(int player, bool modify_state) {
 	}
 
 	if (success && modify_state) {
-		if (piece_on_start != nullptr) {
-			place_at_kennel(piece_on_start);
-		}
+		PiecePtr piece_for_kennel = piece_on_start;
 
 		start_piece(*piece);
+
+		// Only place it in kennel afterwards, otherwise the piece that is starting could be in the way
+		if (piece_for_kennel != nullptr) {
+			place_at_kennel(piece_for_kennel);
+		}
 	}
 
 	return true;
@@ -452,6 +455,14 @@ int BoardState::possible_forward_steps_in_finish(int player, int from_finish_idx
 	return result;
 }
 
+bool BoardState::possible_one_step_on_path(int from_path_idx, bool backwards) {
+	int step = backwards ? -1 : 1;
+	int path_idx = positive_mod(from_path_idx + step, PATH_LENGTH);
+	PiecePtr& piece = get_piece(path_idx);
+
+	return (piece == nullptr || !piece->blocking);
+}
+
 int BoardState::possible_forward_steps_on_path(int from_path_idx, bool backwards) {
 	int step = backwards ? -1 : 1;
 
@@ -507,6 +518,10 @@ int BoardState::possible_steps_of_piece(int player, BoardPosition position, bool
 
 bool BoardState::check_block(int from_path_idx, int count) {
 	bool backwards = (count < 0);
+
+	if (count == 1 || count == -1) {
+		return !possible_one_step_on_path(from_path_idx, backwards);
+	}
 
 	int possible_steps = possible_forward_steps_on_path(from_path_idx, backwards);
 
@@ -599,7 +614,7 @@ bool BoardState::check_state() const {
 		for (int idx = 0; idx != PIECE_COUNT; idx++) {
 			const Piece& piece = pieces.at(player).at(idx);
 			if (piece.player != player || piece.idx != idx) {
-				return false;
+				goto invalid_state;
 			}
 		}
 	}
@@ -615,11 +630,11 @@ bool BoardState::check_state() const {
 
 			if (piece != nullptr) {
 				if (piece->player != player) {
-					return false;
+					goto invalid_state;
 				}
 
 				if (piece->position != BoardPosition(Kennel, player, j)) {
-					return false;
+					goto invalid_state;
 				}
 
 				piece_cnt.at(piece->player)++;
@@ -627,7 +642,7 @@ bool BoardState::check_state() const {
 				expect_pieces_only = true;
 			} else {
 				if (expect_pieces_only) {
-					return false;
+					goto invalid_state;
 				}
 			}
 		}
@@ -638,7 +653,7 @@ bool BoardState::check_state() const {
 
 		if (piece != nullptr) {
 			if (piece->position != BoardPosition(i)) {
-				return false;
+				goto invalid_state;
 			}
 
 			piece_cnt.at(piece->player)++;
@@ -651,11 +666,11 @@ bool BoardState::check_state() const {
 
 			if (piece != nullptr) {
 				if (piece->player != player) {
-					return false;
+					goto invalid_state;
 				}
 
 				if (piece->position != BoardPosition(Finish, player, j)) {
-					return false;
+					goto invalid_state;
 				}
 
 				piece_cnt.at(piece->player)++;
@@ -665,11 +680,16 @@ bool BoardState::check_state() const {
 
 	for (int count : piece_cnt) {
 		if (count != PIECE_COUNT) {
-			return false;
+			goto invalid_state;
 		}
 	}
 
 	return true;
+
+invalid_state:
+	std::cout << *this << std::endl;
+
+	return false;
 }
 
 bool BoardState::move_multiple_pieces_naive(std::vector<MoveSpecifier> move_actions) {
