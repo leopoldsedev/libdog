@@ -1,19 +1,17 @@
 name: Functional Unit Tests
-on:
-  push:
-    branches: [ $default-branch ]
-  pull_request:
-    branches: [ $default-branch ]
+on: [push, pull_request]
 jobs:
   Functional_Unit_Tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Install Google Test
-        run: apt install libgtest-dev libgmock-dev
+        run: sudo apt-get install libgtest-dev libgmock-dev g++-10
+      - name: Check Compiler
+        run: g++-10 --version
       - name: Build
         working-directory: ${{github.workspace}}
-        run: make debug
+        run: CXX=g++-10 make debug
       - name: Run Test
         working-directory: ${{github.workspace}}
         run: make test

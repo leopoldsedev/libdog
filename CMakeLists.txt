@@ -8,7 +8,7 @@ project(${PROJECT_NAME} VERSION 0.1)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-#set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DNDEBUG -O2")
@@ -30,13 +30,16 @@ add_subdirectory(demo)
 
 enable_testing()
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
 
 file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*${SRC_EXT_PATTERN})
 add_executable(${TEST_NAME} ${TEST_SRC_FILES})
 
-target_link_libraries(${TEST_NAME} ${GTEST_BOTH_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(${TEST_NAME} ${GTEST_BOTH_LIBRARIES} ${PROJECT_NAME} Threads::Threads)
 
 include(GoogleTest)
 gtest_discover_tests(${TEST_NAME})

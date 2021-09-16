@@ -35,7 +35,7 @@ clean:
 
 .PHONY: test
 test: debug
-	cd build && ctest --verbose --stop-on-failure
+	cd build && ctest --verbose --stop-on-failure --exclude-regex ^Performance.*$
 
 .PHONY: test_notation
 test_notation: debug
