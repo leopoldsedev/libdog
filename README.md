@@ -19,6 +19,10 @@ To see how to use libdog, check out the [usage demo](demo/usage.cpp).
 
 # Run demo
 
+| :warning: GCC 10 required |
+|---------------------------|
+Tested on Fedora 33 with GCC 10.3.1 20210422 (Red Hat 10.3.1-1).
+
 First, clone the repository.
 ```
 $ git clone https://github.com/leopoldsedev/libdog.git
