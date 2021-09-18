@@ -49,6 +49,8 @@ class BoardState {
 
 		PiecePtr& get_piece(int path_idx);
 
+		const PiecePtr& get_piece(BoardPosition position) const;
+
 		PiecePtr& get_piece(BoardPosition position);
 
 		PiecePtr& get_start(int player);

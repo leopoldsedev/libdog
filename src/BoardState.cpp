@@ -27,17 +27,7 @@ BoardState::BoardState(const BoardState& other) : pieces(other.pieces) {
 		for (int i = 0; i < PIECE_COUNT; i++) {
 			PiecePtr piece_ptr = &pieces[player][i];
 
-			switch(piece_ptr->position.area) {
-				case Kennel:
-					kennels[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
-					break;
-				case Path:
-					path[piece_ptr->position.idx] = piece_ptr;
-					break;
-				case Finish:
-					finishes[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
-					break;
-			}
+			get_piece(piece_ptr->position) = piece_ptr;
 		}
 	}
 
@@ -58,17 +48,7 @@ BoardState& BoardState::operator=(const BoardState& other) {
 			for (int i = 0; i < PIECE_COUNT; i++) {
 				PiecePtr piece_ptr = &pieces[player][i];
 
-				switch(piece_ptr->position.area) {
-					case Kennel:
-						kennels[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
-						break;
-					case Path:
-						path[piece_ptr->position.idx] = piece_ptr;
-						break;
-					case Finish:
-						finishes[piece_ptr->position.player][piece_ptr->position.idx] = piece_ptr;
-						break;
-				}
+				get_piece(piece_ptr->position) = piece_ptr;
 			}
 		}
 	}
@@ -84,19 +64,7 @@ bool operator==(const BoardState& a, const BoardState& b) {
 		for (int i = 0; i < PIECE_COUNT; i++) {
 			const Piece* piece_ptr = &a.pieces[player][i];
 
-			const Piece* piece_ptr_b;
-
-			switch(piece_ptr->position.area) {
-				case Kennel:
-					piece_ptr_b = b.kennels[piece_ptr->position.player][piece_ptr->position.idx];
-					break;
-				case Path:
-					piece_ptr_b = b.path[piece_ptr->position.idx];
-					break;
-				case Finish:
-					piece_ptr_b = b.finishes[piece_ptr->position.player][piece_ptr->position.idx];
-					break;
-			}
+			const Piece* piece_ptr_b = b.get_piece(piece_ptr->position);
 
 			if (piece_ptr_b == nullptr) {
 				return false;
@@ -165,7 +133,7 @@ PiecePtr& BoardState::ref_to_piece_ptr_ref(const PieceRef& piece_ref) {
 }
 
 BoardPosition BoardState::ref_to_pos(const PieceRef& piece_ref) const {
-    PiecePtr piece_ptr = ref_to_piece(piece_ref);
+	PiecePtr piece_ptr = ref_to_piece(piece_ref);
 	return piece_ptr->position;
 }
 
@@ -196,16 +164,21 @@ PiecePtr& BoardState::get_piece(int path_idx) {
 	return path.at(path_idx);
 }
 
-PiecePtr& BoardState::get_piece(BoardPosition position) {
-	if (position.area == Path) {
-		return path.at(position.idx);
-	} else if (position.area == Kennel) {
-		return kennels.at(position.player).at(position.idx);
-	} else if (position.area == Finish) {
-		return finishes.at(position.player).at(position.idx);
+const PiecePtr& BoardState::get_piece(BoardPosition position) const {
+	switch(position.area) {
+		case Path:
+			return path.at(position.idx);
+		case Kennel:
+			return kennels.at(position.player).at(position.idx);
+		case Finish:
+			return finishes.at(position.player).at(position.idx);
+		default:
+			assert(false);
 	}
+}
 
-	assert(false);
+PiecePtr& BoardState::get_piece(BoardPosition position) {
+	return const_cast<PiecePtr&>(static_cast<const BoardState&>(*this).get_piece(position));
 }
 
 PiecePtr& BoardState::get_start(int player) {
