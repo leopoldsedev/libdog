@@ -59,7 +59,7 @@ static void play_game_to_end(DogGame& game, bool random_move) {
 	}
 }
 
-// 0.84 s
+// 816 ms
 TEST(Performance, PossibleSeven) {
 	int N = 10000;
 
@@ -73,7 +73,7 @@ TEST(Performance, PossibleSeven) {
 	}
 }
 
-// 1.20 s
+// 1131 ms
 TEST(Performance, PossibleSevenFew) {
 	int N = 1000000;
 
@@ -87,7 +87,7 @@ TEST(Performance, PossibleSevenFew) {
 	}
 }
 
-// 2.98 s
+// 2995 ms
 TEST(Performance, PossibleSevenWorstCase) {
 	int N = 10;
 
@@ -101,7 +101,7 @@ TEST(Performance, PossibleSevenWorstCase) {
 	}
 }
 
-// 0.17 s
+// 138 ms
 TEST(Performance, FullGame) {
 
 	DogGame game(true);
@@ -112,8 +112,7 @@ TEST(Performance, FullGame) {
 	std::cout << game << std::endl;
 }
 
-// without repr: 35.02 s
-// with repr: 18.20 s
+// with repr: 18391 ms
 TEST(Performance, RandomGames) {
 	for (std::size_t i = 0; i < card_lists.size(); i++) {
 		std::vector<Card> card_list = card_lists[i];
