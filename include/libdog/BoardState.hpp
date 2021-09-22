@@ -17,6 +17,19 @@
 
 namespace libdog {
 
+using BoardStateRepr = std::array<int, PIECE_COUNT * PLAYER_COUNT>;
+
+class OneStep {
+	public:
+		PiecePtr piece;
+		BoardPosition previous_position;
+		bool was_blocking;
+		PiecePtr previous_occupant;
+
+		OneStep(PiecePtr piece, BoardPosition previous_position, bool was_blocking,  PiecePtr previous_occupant) : piece(piece), previous_position(previous_position), was_blocking(was_blocking), previous_occupant(previous_occupant) {;
+		}
+};
+
 class BoardState {
 	public:
 		// TODO Think about a way to properly abstract away the fact that after the last path index the first path index begins again
@@ -26,6 +39,9 @@ class BoardState {
 		std::array<PiecePtr, PATH_LENGTH> path;
 		std::array<std::array<PiecePtr, FINISH_LENGTH>, PLAYER_COUNT> finishes;
 		std::array<std::array<PiecePtr, KENNEL_SIZE>, PLAYER_COUNT> kennels;
+
+		std::vector<OneStep> one_step_undo_stack;
+		bool undo_stack_activated = false;
 
 		BoardState();
 
@@ -63,6 +79,8 @@ class BoardState {
 
 		bool move_piece(PiecePtr& piece, int count, bool avoid_finish, bool modify_state, bool remove_all_on_way);
 
+		void undo_one_step();
+
 		void swap_pieces(PiecePtr& piece1, PiecePtr& piece2);
 
 		bool check_finish_full(int player);
@@ -76,6 +94,8 @@ class BoardState {
 		bool swap_pieces(PiecePtr& piece_1, PiecePtr& piece_2, bool modify_state);
 
 		bool try_enter_finish(int player, int from_path_idx, int count, bool piece_blocking, BoardPosition& position_result, int& count_on_path_result);
+
+		BoardStateRepr get_repr() const;
 
 		bool check_state() const;
 

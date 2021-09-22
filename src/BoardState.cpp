@@ -12,10 +12,11 @@ BoardState::BoardState() : pieces{{
 		{{ Piece(2, 0, BoardPosition(Kennel, 2, 0), false), Piece(2, 1, BoardPosition(Kennel, 2, 1), false), Piece(2, 2, BoardPosition(Kennel, 2, 2), false), Piece(2, 3, BoardPosition(Kennel, 2, 3), false) }},
 		{{ Piece(3, 0, BoardPosition(Kennel, 3, 0), false), Piece(3, 1, BoardPosition(Kennel, 3, 1), false), Piece(3, 2, BoardPosition(Kennel, 3, 2), false), Piece(3, 3, BoardPosition(Kennel, 3, 3), false) }}
 	}} {
+	one_step_undo_stack.reserve(8);
 	reset();
 }
 
-BoardState::BoardState(const BoardState& other) : pieces(other.pieces) {
+BoardState::BoardState(const BoardState& other) : pieces(other.pieces), one_step_undo_stack(other.one_step_undo_stack), undo_stack_activated(other.undo_stack_activated) {
 	assert(other.check_state());
 
 	path.fill(nullptr);
@@ -39,6 +40,9 @@ BoardState& BoardState::operator=(const BoardState& other) {
 
 	if (this != &other) {
 		pieces = other.pieces;
+		one_step_undo_stack = other.one_step_undo_stack;
+		undo_stack_activated = other.undo_stack_activated;
+
 		path.fill(nullptr);
 
 		for (int player = 0; player < PLAYER_COUNT; player++) {
@@ -98,6 +102,8 @@ void BoardState::reset() {
 	}
 
 	path.fill(nullptr);
+	one_step_undo_stack.clear();
+	undo_stack_activated = false;
 }
 
 PiecePtr BoardState::ref_to_piece(const PieceRef& piece_ref) const {
@@ -164,6 +170,7 @@ PiecePtr& BoardState::get_piece(int path_idx) {
 	return path.at(path_idx);
 }
 
+// TODO Optimization: get_piece can be replaced by a pointer in the piece object to its slot
 const PiecePtr& BoardState::get_piece(BoardPosition position) const {
 	switch(position.area) {
 		case Path:
@@ -226,6 +233,7 @@ void BoardState::move_piece(PiecePtr& piece, BoardPosition position, bool blocki
 	assert(piece != nullptr);
 
 	PiecePtr& target = get_piece(position);
+	assert(target == nullptr);
 
 	piece->position = position;
 	piece->blocking = blocking;
@@ -287,6 +295,7 @@ bool BoardState::start_piece(int player, bool modify_state) {
 
 	if (success && modify_state) {
 		PiecePtr piece_for_kennel = piece_on_start;
+		piece_on_start = nullptr;
 
 		start_piece(*piece);
 
@@ -355,6 +364,12 @@ bool BoardState::move_piece(PiecePtr& piece, int count, bool avoid_finish, bool 
 	}
 
 	if (modify_state) {
+		if (undo_stack_activated && count == 1) {
+			PiecePtr previous_occupant = get_piece(position_result);
+			OneStep step(piece, piece->position, piece->blocking, previous_occupant);
+			one_step_undo_stack.push_back(step);
+		}
+
 		// Change board state
 		if (remove_all_on_way) {
 			assert(count_on_path >= 0);
@@ -372,6 +387,22 @@ bool BoardState::move_piece(PiecePtr& piece, int count, bool avoid_finish, bool 
 	}
 
 	return true;
+}
+
+// TODO Move undo stack logic into DogGame
+void BoardState::undo_one_step() {
+	assert(undo_stack_activated);
+	assert(!one_step_undo_stack.empty());
+
+	OneStep step = one_step_undo_stack.back();
+	one_step_undo_stack.pop_back();
+
+	BoardPosition current_position = step.piece->position;
+	move_piece(get_piece(step.piece->position), step.previous_position, step.was_blocking);
+
+	if (step.previous_occupant != nullptr) {
+		move_piece(get_piece(step.previous_occupant->position), current_position, false);
+	}
 }
 
 int BoardState::calc_steps_into_finish(int player, int from_path_idx, int count, bool piece_blocking, int& count_on_path_result) {
@@ -577,6 +608,35 @@ bool BoardState::swap_pieces(PiecePtr& piece_1, PiecePtr& piece_2, bool modify_s
 	}
 
 	return true;
+}
+
+int get_repr_idx(const BoardPosition& position) {
+	switch(position.area) {
+		case Path:
+			return position.idx;
+		case Kennel:
+			return position.idx - KENNEL_SIZE;
+		case Finish:
+			return position.idx + PATH_LENGTH;
+		default:
+			assert(false);
+	}
+}
+
+BoardStateRepr BoardState::get_repr() const {
+	BoardStateRepr result;
+
+	for (int player = 0; player < PLAYER_COUNT; player++) {
+		std::size_t player_offset = PIECE_COUNT * player;
+		for (int i = 0; i < PIECE_COUNT; i++) {
+			const Piece& piece = pieces[player][i];
+			result.at(player_offset + i) = get_repr_idx(piece.position);
+		}
+
+		std::sort(result.begin() + player_offset, result.begin() + player_offset + PIECE_COUNT);
+	}
+
+	return result;
 }
 
 // TODO Add more checks now that unique_ptr isn't used anymore

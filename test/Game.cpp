@@ -6,6 +6,8 @@
 
 using namespace libdog;
 
+// TODO Split this large file into multiple smaller files
+
 
 #define EXPECT_PLAYER_AT(path_idx, player_id) do { \
 	EXPECT_NE(game.board_state.path.at(path_idx), nullptr); \
@@ -57,6 +59,15 @@ using namespace libdog;
  \
 	CHECK_POSSIBLE_ACTIONS(player_id, game_var_name, actions_var_name, state_results_expected); \
 } while(0)
+
+#define TEST_UNDO_STACK(game_var_name, notation_start, player_id) do { \
+	game_var_name.load_board(notation_start); \
+	EXPECT_TRUE(game_var_name.play_notation(player_id, "A'0")); \
+	EXPECT_TRUE(game.board_state.check_state()); \
+	game_var_name.board_state.undo_one_step(); \
+	EXPECT_TRUE(game.board_state.check_state()); \
+	EXPECT_EQ(to_notation(game_var_name.board_state), notation_start); \
+} while(0);
 
 
 TEST(BasicTest, Reset) {
@@ -2364,7 +2375,7 @@ TEST(FullGameTest, One) {
 	EXPECT_EQ(game.result(), 1);
 }
 
-TEST(NoCanadianRuleOff, MoveMultiple) {
+TEST(CanadianRuleOff, MoveMultiple) {
 	DogGame game(false, false, false, false);
 	game.load_board("P0*|P17|P33|P49");
 
@@ -2625,4 +2636,21 @@ TEST(CanadianRuleOff, PossibleAction) {
 
 	actions = game.possible_actions_for_card(0, Seven, false);
 	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {});
+}
+
+TEST(UndoStack, General) {
+	DogGame game(true, false, false, false);
+	game.board_state.undo_stack_activated = true;
+
+	// Trivial case
+	TEST_UNDO_STACK(game, "P0|||", 0);
+
+	// Restore blocking status
+	TEST_UNDO_STACK(game, "P0*|||", 0);
+
+	// From finish
+	TEST_UNDO_STACK(game, "P0|||", 0);
+
+	// Restore piece from kennel
+	TEST_UNDO_STACK(game, "P0*|P1||", 0);
 }

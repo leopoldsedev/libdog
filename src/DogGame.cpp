@@ -42,7 +42,10 @@ void DogGame::reset_with_deck(const std::vector<Card>& cards) {
 }
 
 void DogGame::load_board(const std::string& notation_str) {
+	bool undo_stack_activated = board_state.undo_stack_activated;
 	board_state = from_notation(notation_str);
+	board_state.undo_stack_activated = undo_stack_activated;
+
 	assert(board_state.check_state());
 }
 
@@ -390,34 +393,23 @@ std::vector<ActionVar> DogGame::possible_moves(int player, Card card, int count,
 }
 
 // TODO Refactor this mess of a function
-void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardState board, int count, bool is_joker, std::vector<std::tuple<PieceRef, BoardPosition>> pieces, std::vector<MoveSpecifier> move_specifiers) {
+void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers) {
 	assert(!pieces.empty());
 
 	if (count == 0) {
 		MoveMultiple move_mult(card, move_specifiers, is_joker);
 
-#ifndef NDEBUG
-		bool legal = play(player, move_mult, false, false);
-		if (!legal) {
-			PRINT_DBG(board_state);
-			for (auto m : move_specifiers) {
-				PRINT_DBG(m.piece_ref);
-				PRINT_DBG(m.count);
-			}
-		}
-		assert(legal);
-#endif
-
-		std::tuple<ActionVar, BoardState> pair = std::make_tuple(move_mult, board);
+		// TODO Take benchmark of a set of random games and compare the get_repr approach with the conventional approach
+		// continuous index over full board, save positions per player in canonical order)
+		std::tuple<ActionVar, BoardStateRepr> pair = std::make_tuple(move_mult, board.get_repr());
 		s.insert(pair);
 		return;
 	}
 
 	for (std::size_t i = 0; i < pieces.size(); i++) {
-		BoardPosition position = std::get<1>(pieces.at(i));
+		PiecePtr piece_ptr = std::get<1>(pieces.at(i));
 
-		BoardState board_copy = board;
-		PiecePtr& piece = board_copy.get_piece(position);
+		PiecePtr& piece = board.get_piece(piece_ptr->position);
 		assert(piece != nullptr);
 
 		if (!RULE_ALLOW_SEVEN_MOVE_TEAMMATE_IF_BLOCKED) {
@@ -429,21 +421,10 @@ void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardSt
 		PieceRef piece_ref = std::get<0>(pieces.at(i));
 		MoveSpecifier move_specifier(piece_ref, 1, false);
 
-		// Save all pointers to pieces to enable tracking piece positions through the following move_piece() call
-		std::vector<Piece*> piece_ptrs;
-		for (std::tuple<PieceRef, BoardPosition> t : pieces) {
-			PiecePtr& piece = board_copy.get_piece(std::get<1>(t));
-			piece_ptrs.push_back(piece);
-		}
-
-		bool legal = board_copy.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
+		bool legal = board.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
 
 		if (legal) {
-			std::vector<std::tuple<PieceRef, BoardPosition>> pieces_copy = pieces;
-			for (std::size_t i = 0; i < pieces_copy.size(); i++) {
-				assert(piece_ptrs.at(i) != nullptr);
-				std::get<1>(pieces_copy.at(i)) = piece_ptrs.at(i)->position;
-			}
+			std::vector<std::tuple<PieceRef, PiecePtr>> pieces_copy = pieces;
 
 			// If one piece is done adding 1-steps, the piece shall not be used again in the remaining 1-steps
 			if (!move_specifiers.empty()) {
@@ -458,15 +439,19 @@ void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardSt
 				}
 			}
 
-			std::vector<MoveSpecifier> move_specifiers_copy = move_specifiers;
-			move_specifiers_copy.push_back(move_specifier);
+			move_specifiers.push_back(move_specifier);
 
-			_possible_move_multiples(s, player, card, board_copy, count - 1, is_joker, pieces_copy, move_specifiers_copy);
+			_possible_move_multiples(s, player, card, board, count - 1, is_joker, pieces_copy, move_specifiers);
+			move_specifiers.pop_back();
+
+			board.undo_one_step();
 		}
+
 	}
 }
 
 // TODO Optimize: avoid BoardState copying by playing the move in the original instance and adding a mechanism to undo the moves
+// TODO Optimize: replace recursion with iteration
 // TODO Currently avoid_finish flag is always set to false, generate also the moves that have this flag set to true
 // TODO Consolidate consecutive moves of the same piece
 std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, int count, bool is_joker) {
@@ -487,21 +472,41 @@ std::vector<ActionVar> DogGame::possible_move_multiples(int player, Card card, i
 	}
 
 	// TODO Wrap BoardPosition in a unique_ptr to maybe increase performance
-	std::vector<std::tuple<PieceRef, BoardPosition>> pieces;
+	std::vector<std::tuple<PieceRef, PiecePtr>> pieces;
 
 	for (PieceRef& piece_ref : piece_refs) {
 		PiecePtr piece = board_state.ref_to_piece(piece_ref);
 		assert(piece != nullptr);
-		pieces.push_back(std::make_tuple(piece_ref, piece->position));
+		pieces.push_back(std::make_tuple(piece_ref, piece));
 		assert(board_state.get_piece(piece->position) != nullptr);
 	}
 
-	my_set s;
-	_possible_move_multiples(s, player, card, board_state, count, is_joker, pieces, {});
+	board_state.undo_stack_activated = true;
 
-	for (std::tuple<ActionVar, BoardState> x : s) {
-		auto action = std::get<0>(x);
+	my_set s;
+	std::vector<MoveSpecifier> move_specifiers;
+	move_specifiers.reserve(7);
+	_possible_move_multiples(s, player, card, board_state, count, is_joker, pieces, move_specifiers);
+
+	board_state.undo_stack_activated = false;
+
+	for (std::tuple<ActionVar, BoardStateRepr> x : s) {
+		ActionVar action = std::get<0>(x);
 		result.push_back(action);
+
+#ifndef NDEBUG
+		assert(VAR_IS(action, MoveMultiple));
+		MATCH(&action, MoveMultiple, move_mult);
+		bool legal = play(player, action, false, false);
+		if (!legal) {
+			PRINT_DBG(board_state);
+			for (auto m : move_mult->get_move_specifiers()) {
+				PRINT_DBG(m.piece_ref);
+				PRINT_DBG(m.count);
+			}
+		}
+		assert(legal);
+#endif
 	}
 
 	return result;

@@ -97,24 +97,30 @@ class DogGame {
 		std::vector<ActionVar> possible_moves(int player, Card card, int count, bool is_joker);
 
 		struct action_state_equal_to {
-			bool operator()(const std::tuple<ActionVar, BoardState> &a, const std::tuple<ActionVar, BoardState> &b) const {
+			bool operator()(const std::tuple<ActionVar, BoardStateRepr> &a, const std::tuple<ActionVar, BoardStateRepr> &b) const {
 				return std::get<1>(a) == std::get<1>(b);
 			}
 		};
 
+		// TODO Optimization: Play around with different hashes and benchmark them on a random set of games
 		struct action_state_hash {
-			size_t operator()(const std::tuple<ActionVar, BoardState> &t) const {
-				BoardPosition pos0 = std::get<1>(t).pieces[0][0].position;
-				BoardPosition pos1 = std::get<1>(t).pieces[1][0].position;
-				BoardPosition pos2 = std::get<1>(t).pieces[2][0].position;
-				BoardPosition pos3 = std::get<1>(t).pieces[3][0].position;
-				return pos0.idx + pos1.idx + pos2.idx + pos3.idx;
+			size_t operator()(const std::tuple<ActionVar, BoardStateRepr> &t) const {
+				const BoardStateRepr& repr = std::get<1>(t);
+				int offset = PIECE_COUNT - 1;
+				return repr[0 * PIECE_COUNT + offset] +
+					repr[1 * PIECE_COUNT + offset] +
+					repr[2 * PIECE_COUNT + offset] +
+					repr[3 * PIECE_COUNT + offset] +
+					repr[0 * PIECE_COUNT + offset-1] +
+					repr[1 * PIECE_COUNT + offset-1] +
+					repr[2 * PIECE_COUNT + offset-1] +
+					repr[3 * PIECE_COUNT + offset-1];
 			}
 		};
 
-		typedef std::unordered_set<std::tuple<ActionVar, BoardState>, action_state_hash, action_state_equal_to> my_set;
+		typedef std::unordered_set<std::tuple<ActionVar, BoardStateRepr>, action_state_hash, action_state_equal_to> my_set;
 
-		void _possible_move_multiples(my_set& s, int player, Card card, BoardState board, int count, bool is_joker, std::vector<std::tuple<PieceRef, BoardPosition>> pieces, std::vector<MoveSpecifier> move_specifiers);
+		void _possible_move_multiples(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers);
 
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker);
 

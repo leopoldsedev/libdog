@@ -17,6 +17,7 @@ class Piece {
 		bool blocking;
 
 		Piece(int player, int idx, BoardPosition position, bool blocking) : player(player), idx(idx), position(position), blocking(blocking) {
+			// Throw exception instead of using assert. See https://stackoverflow.com/questions/4747706/standard-or-custom-exception-in-c
 			assert(IS_VALID_PLAYER(player));
 		}
 
