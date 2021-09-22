@@ -14,13 +14,7 @@ void CardStack::remove(Card card) {
 	}
 }
 
-CardStack::CardStack(vector<Card> cards) : cards(cards) {
-#ifndef NDEBUG
-	rng = default_random_engine(0);
-#else
-	random_device r;
-	rng = default_random_engine(r());
-#endif
+CardStack::CardStack(vector<Card> cards, default_random_engine rng) : cards(cards), rng(rng) {
 }
 
 size_t CardStack::size() const {

@@ -33,6 +33,10 @@ void DogGame::_reset() {
 
 void DogGame::reset_with_deck(const std::string& card_str) {
 	std::vector<Card> cards = cards_from_str(card_str);
+	reset_with_deck(cards);
+}
+
+void DogGame::reset_with_deck(const std::vector<Card>& cards) {
 	cards_state = CardsState(cards);
 	_reset();
 }

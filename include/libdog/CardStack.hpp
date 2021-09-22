@@ -12,6 +12,15 @@ using namespace std;
 
 namespace libdog {
 
+static default_random_engine get_rng() {
+#ifndef NDEBUG
+	return default_random_engine(0);
+#else
+	random_device r;
+	return default_random_engine(r());
+#endif
+}
+
 // TODO Track suites as well to make library usable for full game interfaces
 class CardStack {
 	private:
@@ -21,7 +30,10 @@ class CardStack {
 		void remove(Card card);
 
 	public:
-		CardStack(vector<Card> cards);
+		CardStack(vector<Card> cards, default_random_engine rng);
+
+		CardStack(vector<Card> cards) : CardStack(cards, get_rng()) {
+		}
 
 		CardStack() : CardStack(vector<Card>()) {
 		}

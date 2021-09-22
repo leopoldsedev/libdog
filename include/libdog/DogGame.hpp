@@ -35,6 +35,8 @@ class DogGame {
 
 		void reset_with_deck(const std::string& card_str);
 
+		void reset_with_deck(const std::vector<Card>& cards);
+
 		void load_board(const std::string& notation_str);
 
 		// -1 ... undecided (game not concluded yet)

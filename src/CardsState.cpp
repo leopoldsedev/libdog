@@ -68,6 +68,10 @@ vector<Card> CardsState::get_hand_cards(int player, bool deduplicate) const {
 	return result;
 }
 
+const CardStack& CardsState::get_deck() const {
+	return deck;
+}
+
 void CardsState::give_card(int player, Card card) {
 	CardStack& hand = get_hand(player);
 	CardStack& player_give_buffer = give_buffer.at(player);

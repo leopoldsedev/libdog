@@ -62,6 +62,9 @@ class CardsState {
 		[[nodiscard]]
 		vector<Card> get_hand_cards(int player, bool deduplicate = false) const;
 
+		[[nodiscard]]
+		const CardStack& get_deck() const;
+
 		void give_card(int player, Card card);
 
 		bool give_buffer_full(int player);
