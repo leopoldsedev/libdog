@@ -108,14 +108,18 @@ class DogGame {
 				const BoardStateRepr& repr = std::get<1>(t);
 				int offset = PIECE_COUNT - 1;
 				return
-					repr[0 * PIECE_COUNT + offset - 0] +
-					repr[1 * PIECE_COUNT + offset - 0] +
-					repr[2 * PIECE_COUNT + offset - 0] +
-					repr[3 * PIECE_COUNT + offset - 0] +
-					repr[0 * PIECE_COUNT + offset - 1] +
-					repr[1 * PIECE_COUNT + offset - 1] +
-					repr[2 * PIECE_COUNT + offset - 1] +
-					repr[3 * PIECE_COUNT + offset - 1];
+					repr[0 * PIECE_COUNT + offset - 0] * repr[0 * PIECE_COUNT + offset - 0] +
+					repr[1 * PIECE_COUNT + offset - 0] * repr[1 * PIECE_COUNT + offset - 0] +
+					repr[2 * PIECE_COUNT + offset - 0] * repr[2 * PIECE_COUNT + offset - 0] +
+					repr[3 * PIECE_COUNT + offset - 0] * repr[3 * PIECE_COUNT + offset - 0] +
+					repr[0 * PIECE_COUNT + offset - 1] * repr[0 * PIECE_COUNT + offset - 1] +
+					repr[1 * PIECE_COUNT + offset - 1] * repr[1 * PIECE_COUNT + offset - 1] +
+					repr[2 * PIECE_COUNT + offset - 1] * repr[2 * PIECE_COUNT + offset - 1] +
+					repr[3 * PIECE_COUNT + offset - 1] * repr[3 * PIECE_COUNT + offset - 1] +
+					repr[0 * PIECE_COUNT + offset - 2] * repr[0 * PIECE_COUNT + offset - 2] +
+					repr[1 * PIECE_COUNT + offset - 2] * repr[1 * PIECE_COUNT + offset - 2] +
+					repr[2 * PIECE_COUNT + offset - 2] * repr[2 * PIECE_COUNT + offset - 2] +
+					repr[3 * PIECE_COUNT + offset - 2] * repr[3 * PIECE_COUNT + offset - 2];
 			}
 		};
 
