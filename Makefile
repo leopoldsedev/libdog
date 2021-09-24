@@ -35,16 +35,16 @@ clean:
 
 .PHONY: test
 test: debug
-	./build/libdog_test --gtest_filter=-Performance.*
+	./build/libdog_test --gtest_break_on_failure --gtest_filter=-Performance.*
 
 .PHONY: test_notation
 test_notation: debug
-	./build/libdog_test --gtest_filter=NotationParsing.*
+	./build/libdog_test --gtest_break_on_failure --gtest_filter=NotationParsing.*
 
 .PHONY: test_perf
 test_perf: release
-	./build/libdog_test --gtest_filter=Performance.*
+	./build/libdog_test --gtest_break_on_failure --gtest_filter=Performance.*
 
 .PHONY: callgrind
 callgrind: release
-	valgrind --tool=callgrind ./build/libdog_test --gtest_filter=Performance.FullGame
+	valgrind --tool=callgrind ./build/libdog_test --gtest_break_on_failure --gtest_filter=Performance.FullGame

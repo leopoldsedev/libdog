@@ -107,20 +107,22 @@ class DogGame {
 			size_t operator()(const std::tuple<ActionVar, BoardStateRepr> &t) const {
 				const BoardStateRepr& repr = std::get<1>(t);
 				int offset = PIECE_COUNT - 1;
-				return repr[0 * PIECE_COUNT + offset] +
-					repr[1 * PIECE_COUNT + offset] +
-					repr[2 * PIECE_COUNT + offset] +
-					repr[3 * PIECE_COUNT + offset] +
-					repr[0 * PIECE_COUNT + offset-1] +
-					repr[1 * PIECE_COUNT + offset-1] +
-					repr[2 * PIECE_COUNT + offset-1] +
-					repr[3 * PIECE_COUNT + offset-1];
+				return
+					repr[0 * PIECE_COUNT + offset - 0] +
+					repr[1 * PIECE_COUNT + offset - 0] +
+					repr[2 * PIECE_COUNT + offset - 0] +
+					repr[3 * PIECE_COUNT + offset - 0] +
+					repr[0 * PIECE_COUNT + offset - 1] +
+					repr[1 * PIECE_COUNT + offset - 1] +
+					repr[2 * PIECE_COUNT + offset - 1] +
+					repr[3 * PIECE_COUNT + offset - 1];
 			}
 		};
 
 		typedef std::unordered_set<std::tuple<ActionVar, BoardStateRepr>, action_state_hash, action_state_equal_to> my_set;
 
 		void _possible_move_multiples(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers);
+		void _possible_move_multiples_iter(my_set& s, int player, Card card, BoardState& board, size_t count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces);
 
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker);
 
