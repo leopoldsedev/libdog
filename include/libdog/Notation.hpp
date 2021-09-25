@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "Action.hpp"
 #include "BoardState.hpp"
 
