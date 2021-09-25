@@ -19,8 +19,8 @@ To see how to use libdog, check out the [usage demo](demo/usage.cpp).
 
 # Run demo
 
-| :warning: GCC 10 required |
-|---------------------------|
+| :warning: GCC 10 or higher required |
+|-------------------------------------|
 
 Tested on Fedora 33 with GCC 10.3.1 20210422 (Red Hat 10.3.1-1).
 
@@ -49,7 +49,7 @@ $ make test
 
 # Notation
 
-To give the game some formality and for development/testing purposes, a game notation to describe board states and to specify player actions has been developed.
+To give the game some formality and for development/testing purposes, I developed a game notation to describe board states and to specify player actions.
 
 
 ## Board state
