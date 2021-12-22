@@ -284,6 +284,5 @@ The action can be any **other** action as described previously.
 
 This library has the following limitations.
 
-* Querying legal moves can be rather slow depending on the game state. This is because there may be a lot of possibilities of split a `7` between pieces. So far the focus of the implementation has been correctness and there is much headroom for optimization. As a result, a discard action could also turn out to be a bit slow since to determine if discarding is legal in a given position, the list of legal moves has to be queried.
-* The list of possible moves currently does not include moves with a `7` that avoid the finish. This technically makes this implementation incomplete. However, this detail was omitted because it would slow down generating the list of possible actions even further and it is a very rare action anyway. Once the library is faster this detail will be fixed.
+* Querying legal moves in a given position can be rather slow depending on the game state. This is because there may be a **lot** of possibilities of splitting a `7` between pieces. As a result, a discard action could also turn out to be a bit slow since to determine if discarding is legal in a given position, the list of legal moves has to be queried.
 * Only the 4 player variant of dog is implemented (2, 3, 5, and 6 player variants exist).

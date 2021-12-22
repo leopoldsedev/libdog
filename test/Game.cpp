@@ -583,9 +583,58 @@ TEST(PossibleAction, MoveInFinish) {
 }
 
 TEST(PossibleAction, AvoidFinish) {
-	GTEST_SKIP();
+	DogGame game(true, false, false, false);
+	std::vector<ActionVar> actions;
 
-	// TODO
+	// 0    0 0 0 .    . . 0 . .               3
+	//      3 2 1 0    . \     .
+	//                 .  . 0  .
+	//                 .  . 1  .               3
+	//                 .  . 2  .               3
+	//               .    . 3    .             3
+	//             .               .           3
+	//           .                   .
+	// . . . . .                       . . . . .
+	// .                                     / .
+	// .  . . . .                     . . . .  .
+	// . /                                     .
+	// . . . . .                       . . . . .
+	//           .                   .
+	// 1           .               .
+	// 1             .      .    .
+	// 1               .    .  .
+	// 1               .    .  .
+	//                 .    .  .
+	//                 .     \ .
+	// 1               . . 2 . .    . 2 2 2    2
+	game.load_board("P62||P30|");
+
+	actions = game.possible_actions_for_card(0, Seven, false);
+	TEST_POSSIBLE_ACTIONS(0, game, actions, -1, {
+		from_notation("F3||P31|") COMMA
+		from_notation("F2||P32|") COMMA
+		from_notation("F1||F0|") COMMA
+		from_notation("F0||F1|") COMMA
+		from_notation("P0||F2|") COMMA
+		from_notation("P63||F3|") COMMA
+
+#if INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES
+		from_notation("P5||P30|") COMMA
+		from_notation("P4||P31|") COMMA
+		from_notation("P3||P32|") COMMA
+		from_notation("P2||P33|") COMMA
+		from_notation("P1||P34|") COMMA
+		from_notation("P0||P35|") COMMA
+		from_notation("P63||P36|") COMMA
+		from_notation("P62||P37|") COMMA
+
+		from_notation("P2||F0|") COMMA
+		from_notation("P1||F1|") COMMA
+
+		from_notation("F1||P33|") COMMA
+		from_notation("F0||P34|") COMMA
+#endif
+	});
 }
 
 TEST(PossibleAction, Swap) {
@@ -893,7 +942,6 @@ TEST(PossibleAction, SevenSimple) {
 		from_notation("F0F1F2F3|P18F1F2F3|P44F1F2F3|P48P60F2F3") COMMA
 	});
 
-	// TODO Fix the following test cases (currently 7 moves where individual moves are avoiding the finish are not included in possible actions)
 	// 0    . . . .    . . 0 . 3               3
 	//      3 2 1 0    . \     .
 	//                 .  . 0  .
@@ -922,18 +970,18 @@ TEST(PossibleAction, SevenSimple) {
 		from_notation("P62F1F2F3|P18F1F2F3|P44F1F2F3|P48P60F2F3") COMMA
 		from_notation("P63F1F2F3|P18F1F2F3|P43F1F2F3|P48P60F2F3") COMMA
 		from_notation("P0F1F2F3|P18F1F2F3|P42F1F2F3|P48P60F2F3") COMMA
-		// TODO Uncomment
-//        from_notation("P1F1F2F3|P18F1F2F3|P41F1F2F3|P48P60F2F3") COMMA
-//        from_notation("P2F1F2F3|P18F1F2F3|P40F1F2F3|P48P60F2F3") COMMA
-//        from_notation("P3F1F2F3|P18F1F2F3|P39F1F2F3|P48P60F2F3") COMMA
-//        from_notation("P4F1F2F3|P18F1F2F3|P38F1F2F3|P48P60F2F3") COMMA
-//        from_notation("P5F1F2F3|P18F1F2F3|P37F1F2F3|P48P60F2F3") COMMA
+#if INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES
+		from_notation("P1F1F2F3|P18F1F2F3|P41F1F2F3|P48P60F2F3") COMMA
+		from_notation("P2F1F2F3|P18F1F2F3|P40F1F2F3|P48P60F2F3") COMMA
+		from_notation("P3F1F2F3|P18F1F2F3|P39F1F2F3|P48P60F2F3") COMMA
+		from_notation("P4F1F2F3|P18F1F2F3|P38F1F2F3|P48P60F2F3") COMMA
+		from_notation("P5F1F2F3|P18F1F2F3|P37F1F2F3|P48P60F2F3") COMMA
+#endif
 
 		from_notation("F0F1F2F3|P18F1F2F3|P41F1F2F3|P48P60F2F3") COMMA
 	});
 
-	return; // TODO Remove
-
+#if INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES
 	// 0    . . . .    . . 0 . 3               3
 	//      3 2 1 0    . \     .
 	//                 .  . 0  .
@@ -972,6 +1020,7 @@ TEST(PossibleAction, SevenSimple) {
 
 		from_notation("F0F1F2F3|P18F1F2F3|P35F1F2F3|P48P60F2F3") COMMA
 	});
+#endif
 }
 
 TEST(PossibleAction, SevenBlockades) {
@@ -1377,7 +1426,12 @@ TEST(PossibleAction, FullGame) {
 
 	// 3: 923KX
 	actions = game.get_possible_actions(3);
-	TEST_POSSIBLE_ACTIONS(3, game, actions, 25, {
+#if INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES
+	int action_count = 28;
+#else
+	int action_count = 25;
+#endif
+	TEST_POSSIBLE_ACTIONS(3, game, actions, action_count, {
 		from_notation("P60|P12|P28|P49") COMMA // XA'0
 		from_notation("P60|P12|P28|P50") COMMA // X20, 20
 		from_notation("P60|P12|P28|P51") COMMA // X30, 30
@@ -1402,10 +1456,11 @@ TEST(PossibleAction, FullGame) {
 		from_notation("P60|F1|P28|P49") COMMA // X7010'6
 		from_notation("P60|F2|P28|P48*") COMMA // X70'7
 
-		// TODO Uncomment once fixed (currently 7 moves where individual moves are avoiding the finish are not included in possible actions)
-//        from_notation("P60|P17|P28|P50") COMMA // X7020'5-
-//        from_notation("P60|P18|P28|P49") COMMA // X7010'6-
-//        from_notation("P60|P19|P28|P48*") COMMA // X70'7-
+#if INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES
+		from_notation("P60|P17|P28|P50") COMMA // X7020'5-
+		from_notation("P60|P18|P28|P49") COMMA // X7010'6-
+		from_notation("P60|P19|P28|P48*") COMMA // X70'7-
+#endif
 	});
 
 	EXPECT_TRUE(game.play_notation(3, "X4'0"));

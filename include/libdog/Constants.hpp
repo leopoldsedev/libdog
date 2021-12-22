@@ -1,7 +1,9 @@
 #pragma once
 
 
-// Note that changing these constants will likely break the implementation
+#define INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES (false)
+
+// Note that changing the constants after this comment will likely break the implementation
 
 #define PLAYER_COUNT (4)
 #define PIECE_COUNT (4)

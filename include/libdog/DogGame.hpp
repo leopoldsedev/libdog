@@ -125,7 +125,10 @@ class DogGame {
 
 		typedef std::unordered_set<std::tuple<ActionVar, BoardStateRepr>, action_state_hash, action_state_equal_to> my_set;
 
+		void descend_move(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers, PiecePtr& piece_ptr, PieceRef& piece_ref, PiecePtr& piece, bool avoid_finish);
+
 		void _possible_move_multiples(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers);
+
 		void _possible_move_multiples_iter(my_set& s, int player, Card card, BoardState& board, size_t count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces);
 
 		std::vector<ActionVar> possible_move_multiples(int player, Card card, int count, bool is_joker);

@@ -3,7 +3,7 @@
 #include "Debug.hpp"
 
 
-#define USE_POSSIBLE_SEVENS_ITERATIVE (true)
+#define USE_POSSIBLE_SEVENS_ITERATIVE (false)
 
 #define APPEND(x, y) do { \
 	auto b = (y); \
@@ -395,6 +395,9 @@ std::vector<ActionVar> DogGame::possible_moves(int player, Card card, int count,
 }
 
 #if USE_POSSIBLE_SEVENS_ITERATIVE
+// TODO The iterative implementation currently does not include moves that with
+// the avoid finish flag set. In contrast, the recursive implementation does
+// include those moves.
 
 void DogGame::_possible_move_multiples_iter(my_set& s, int player, Card card, BoardState& board, size_t total_count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> all_pieces) {
 	std::vector<std::vector<std::tuple<PieceRef, PiecePtr>>> pieces_stack;
@@ -486,7 +489,36 @@ void DogGame::_possible_move_multiples_iter(my_set& s, int player, Card card, Bo
 
 #else
 
-// TODO Refactor this mess of a function
+void DogGame::descend_move(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers, PiecePtr& piece_ptr, PieceRef& piece_ref, PiecePtr& piece, bool avoid_finish) {
+	MoveSpecifier move_specifier(piece_ref, 1, avoid_finish);
+
+	bool legal = board.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
+
+	if (legal) {
+		std::vector<std::tuple<PieceRef, PiecePtr>> pieces_copy = pieces;
+
+		// If one piece is done adding 1-steps, the piece shall not be used again in the remaining 1-steps
+		if (!move_specifiers.empty()) {
+			PieceRef last_piece_ref = move_specifiers.back().piece_ref;
+			if (last_piece_ref != piece_ref) {
+				for (std::size_t i = 0; i < pieces_copy.size(); i++) {
+					if (std::get<0>(pieces_copy[i]) == last_piece_ref) {
+						pieces_copy.erase(pieces_copy.begin() + i);
+						break;
+					}
+				}
+			}
+		}
+
+		move_specifiers.push_back(move_specifier);
+
+		_possible_move_multiples(s, player, card, board, count - 1, is_joker, pieces_copy, move_specifiers);
+		move_specifiers.pop_back();
+
+		board.undo_one_step();
+	}
+}
+
 void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardState& board, int count, bool is_joker, std::vector<std::tuple<PieceRef, PiecePtr>> pieces, std::vector<MoveSpecifier>& move_specifiers) {
 	assert(!pieces.empty());
 
@@ -500,6 +532,7 @@ void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardSt
 
 	for (std::size_t i = 0; i < pieces.size(); i++) {
 		PiecePtr piece_ptr = std::get<1>(pieces.at(i));
+		PieceRef piece_ref = std::get<0>(pieces.at(i));
 
 		PiecePtr& piece = board.get_piece(piece_ptr->position);
 		assert(piece != nullptr);
@@ -510,34 +543,10 @@ void DogGame::_possible_move_multiples(my_set& s, int player, Card card, BoardSt
 			}
 		}
 
-		PieceRef piece_ref = std::get<0>(pieces.at(i));
-		MoveSpecifier move_specifier(piece_ref, 1, false);
-
-		bool legal = board.move_piece(piece, move_specifier.count, move_specifier.avoid_finish, true, true);
-
-		if (legal) {
-			std::vector<std::tuple<PieceRef, PiecePtr>> pieces_copy = pieces;
-
-			// If one piece is done adding 1-steps, the piece shall not be used again in the remaining 1-steps
-			if (!move_specifiers.empty()) {
-				PieceRef last_piece_ref = move_specifiers.back().piece_ref;
-				if (last_piece_ref != piece_ref) {
-					for (std::size_t i = 0; i < pieces_copy.size(); i++) {
-						if (std::get<0>(pieces_copy[i]) == last_piece_ref) {
-							pieces_copy.erase(pieces_copy.begin() + i);
-							break;
-						}
-					}
-				}
-			}
-
-			move_specifiers.push_back(move_specifier);
-
-			_possible_move_multiples(s, player, card, board, count - 1, is_joker, pieces_copy, move_specifiers);
-			move_specifiers.pop_back();
-
-			board.undo_one_step();
-		}
+		descend_move(s, player, card, board, count, is_joker, pieces, move_specifiers, piece_ptr, piece_ref, piece, false);
+#if INCLUDE_AVOID_FINISH_IN_POSSIBLE_MOVES
+		descend_move(s, player, card, board, count, is_joker, pieces, move_specifiers, piece_ptr, piece_ref, piece, true);
+#endif
 	}
 }
 
